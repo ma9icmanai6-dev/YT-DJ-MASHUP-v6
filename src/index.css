@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@keyframes slideBounce {
+  0%, 20% {
+    transform: translateX(0%);
+  }
+  60%, 80% {
+    transform: translateX(var(--slide-dist, -50%));
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+.animate-marquee-slide {
+  display: inline-block;
+  white-space: nowrap;
+  animation: slideBounce 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+
+.hover-marquee:hover .animate-marquee-slide {
+  animation: slideBounce 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
