@@ -10,6 +10,18 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
 
+// Prevent stale HTTP caching on search & metadata endpoints
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+app.post('/api/cache/clear', (_req, res) => {
+  res.json({ cleared: true, timestamp: Date.now() });
+});
+
 // Helper to parse duration string "MM:SS", "HH:MM:SS", or float seconds to integer seconds
 function parseDurationSec(durationStr?: string | number): number {
   if (typeof durationStr === 'number' && !isNaN(durationStr)) {

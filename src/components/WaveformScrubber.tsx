@@ -87,7 +87,7 @@ export const WaveformScrubber: React.FC<WaveformScrubberProps> = ({
       <div
         ref={containerRef}
         onPointerDown={handlePointerDown}
-        className="relative w-full h-11 bg-neutral-950/50 backdrop-blur-[1px] rounded border border-neutral-800/80 hover:border-neutral-700 cursor-pointer overflow-hidden flex items-center px-1"
+        className="relative w-full h-11 bg-neutral-950/65 rounded border border-neutral-800/80 hover:border-neutral-700 cursor-pointer overflow-hidden flex items-center px-1"
         title="Waveform Overview (Click anywhere to jump)"
       >
         {/* Background Grid Lines (Measure markers) */}
@@ -108,7 +108,7 @@ export const WaveformScrubber: React.FC<WaveformScrubberProps> = ({
                 className="flex-1 flex flex-col items-center justify-center h-full"
               >
                 <div
-                  className={`w-full rounded-sm transition-colors duration-150 ${
+                  className={`w-full rounded-sm ${
                     isPassed
                       ? `${barActiveColor} opacity-90`
                       : 'bg-neutral-700/60 opacity-60'
@@ -165,7 +165,7 @@ export const WaveformScrubber: React.FC<WaveformScrubberProps> = ({
           className="absolute top-0 bottom-0 pointer-events-none z-30 flex flex-col items-center"
           style={{ left: `${progressPercent}%` }}
         >
-          <div className={`w-1 h-full ${playheadColor} shadow-md -translate-x-1/2 ${isPlaying ? 'animate-pulse' : ''}`} />
+          <div className={`w-1 h-full ${playheadColor} shadow-md -translate-x-1/2`} />
         </div>
       </div>
     </div>

@@ -51,7 +51,7 @@ export const DeckPitchBpm: React.FC<DeckPitchBpmProps> = ({
   };
 
   return (
-    <div className="bg-neutral-950/50 backdrop-blur-[1px] p-3 rounded-lg border border-neutral-800/80 shadow-inner flex flex-col justify-between">
+    <div className="bg-neutral-950/65 p-3 rounded-lg border border-neutral-800/80 shadow-inner flex flex-col justify-between">
       {/* Top Header: BPM and Key */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
         <div>

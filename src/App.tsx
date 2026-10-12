@@ -101,6 +101,27 @@ export default function App() {
   const [customTracks, setCustomTracks] = useState<DeckTrack[]>([]);
   const [activeRandomMashup, setActiveRandomMashup] = useState<RandomMashupPairing | null>(null);
   const [acapellaOnDeckA, setAcapellaOnDeckA] = useState<boolean>(true);
+  const [searchResetTrigger, setSearchResetTrigger] = useState<number>(0);
+
+  // Clear all browser & backend song searches and caches on load
+  const clearAllSongSearchesAndCaches = useCallback(() => {
+    try {
+      window.localStorage?.clear();
+      window.sessionStorage?.clear();
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        window.caches.keys().then((keys) => {
+          keys.forEach((k) => window.caches.delete(k));
+        }).catch(() => {});
+      }
+      fetch('/api/cache/clear', { method: 'POST' }).catch(() => {});
+    } catch {}
+    setSearchResetTrigger((prev) => prev + 1);
+  }, []);
+
+  useEffect(() => {
+    setCustomTracks([]);
+    clearAllSongSearchesAndCaches();
+  }, [clearAllSongSearchesAndCaches]);
 
   // Active Player References (points to either YT or Archive HTML5 player)
   const playerARef = useRef<YTPlayerWrapper | null>(null);
@@ -724,6 +745,7 @@ export default function App() {
 
   // Load Mashup Preset (Loads both Deck A and Deck B with preset matching, stays paused)
   const handleLoadMashupPreset = (preset: MashupPreset) => {
+    clearAllSongSearchesAndCaches();
     setEmbedErrorA(false);
     setEmbedErrorB(false);
     setActiveRandomMashup(null);
@@ -768,6 +790,7 @@ export default function App() {
 
   // Intelligent Random Mashup Generator (Top Acapella + Top Instrumental where Songs, Lyrics & Beats go together)
   const handleRandomMashup = (overridePairing?: RandomMashupPairing, forceAcapellaOnA?: boolean) => {
+    clearAllSongSearchesAndCaches();
     const pairing = overridePairing || getRandomCompatMashupPairing(activeRandomMashup?.id);
     const putAcapellaOnA = forceAcapellaOnA !== undefined ? forceAcapellaOnA : acapellaOnDeckA;
 
@@ -855,6 +878,7 @@ export default function App() {
 
   // Load individual track to specific deck (supports both YouTube and Archive.org media!)
   const handleLoadTrackToDeck = (deckId: 'A' | 'B', track: DeckTrack) => {
+    clearAllSongSearchesAndCaches();
     setCustomTracks(prev => (prev.some(t => t.id === track.id) ? prev : [track, ...prev]));
 
     if (deckId === 'A') {
@@ -1179,7 +1203,7 @@ export default function App() {
       />
 
       {/* Main Console Layout */}
-      <main className="flex-1 max-w-[1720px] w-full mx-auto p-2 sm:p-2.5 flex flex-col gap-2.5">
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-2 sm:px-3 py-1.5 flex flex-col gap-2">
         {/* Top Mashup Video Stage: Dual YouTube videos mashed up at the top with Screen blend and CC for Accapella */}
         <TopMashupVideoStage
           trackA={deckA.track}
@@ -1203,7 +1227,7 @@ export default function App() {
         />
 
         {/* Dual Decks & Central Master Mixer */}
-        <div className="flex flex-col lg:flex-row gap-2.5 items-stretch">
+        <div className="flex flex-col lg:flex-row gap-2 items-stretch">
           {/* DECK A */}
           <Deck
             state={deckA}
@@ -1234,6 +1258,7 @@ export default function App() {
             onLoadTrack={(t) => handleLoadTrackToDeck('A', t)}
             customTracks={customTracks}
             showVideo={false}
+            resetSearchTrigger={searchResetTrigger}
           />
 
           {/* MASTER MIXER CONSOLE */}
@@ -1300,6 +1325,7 @@ export default function App() {
             onLoadTrack={(t) => handleLoadTrackToDeck('B', t)}
             customTracks={customTracks}
             showVideo={false}
+            resetSearchTrigger={searchResetTrigger}
           />
         </div>
       </main>
@@ -1324,6 +1350,7 @@ export default function App() {
         onLoadMashupPreset={handleLoadMashupPreset}
         onAddCustomTrack={(t) => setCustomTracks(prev => [t, ...prev])}
         customTracks={customTracks}
+        resetTrigger={searchResetTrigger}
       />
 
       <RecordingModal

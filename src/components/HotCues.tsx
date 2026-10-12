@@ -26,7 +26,7 @@ export const HotCues: React.FC<HotCuesProps> = ({
   };
 
   return (
-    <div className="bg-neutral-950/50 backdrop-blur-[1px] p-3 rounded-lg border border-neutral-800/80 shadow-inner">
+    <div className="bg-neutral-950/65 p-3 rounded-lg border border-neutral-800/80 shadow-inner">
       <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5 mb-2.5">
         <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 font-bold flex items-center gap-1.5">
           <Bookmark className="w-3 h-3 text-neutral-400" />

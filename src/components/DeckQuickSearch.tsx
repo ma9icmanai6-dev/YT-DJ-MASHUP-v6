@@ -27,6 +27,7 @@ interface DeckQuickSearchProps {
   onLoadTrack: (track: DeckTrack) => void;
   accentColor: 'cyan' | 'orange';
   customTracks?: DeckTrack[];
+  resetTrigger?: number;
 }
 
 export const DeckQuickSearch: React.FC<DeckQuickSearchProps> = ({
@@ -34,6 +35,7 @@ export const DeckQuickSearch: React.FC<DeckQuickSearchProps> = ({
   onLoadTrack,
   accentColor,
   customTracks = [],
+  resetTrigger = 0,
 }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +45,17 @@ export const DeckQuickSearch: React.FC<DeckQuickSearchProps> = ({
   const [archiveMode, setArchiveMode] = useState<ArchiveMediaMode>('all');
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear all song searches and results on load & whenever a song/preset loads
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    setQuery('');
+    setLiveResults([]);
+    setIsSearching(false);
+    setIsOpen(false);
+  }, [resetTrigger]);
 
   const isCyan = accentColor === 'cyan';
   const focusBorder = isCyan ? 'focus-within:border-cyan-400' : 'focus-within:border-amber-400';
@@ -72,10 +85,10 @@ export const DeckQuickSearch: React.FC<DeckQuickSearchProps> = ({
   // Check if query is an Archive.org link or @username
   const archiveInfo = useMemo(() => extractArchiveUrlInfo(query), [query]);
 
-  // Instant local catalog matches (60+ songs loaded on each deck)
+  // Instant local catalog matches (only when user types a query so search starts clean on load)
   const localMatches = useMemo(() => {
     const cleanQ = normalizeDjSearchQuery(query).toLowerCase();
-    if (!cleanQ) return allTracks.slice(0, 60);
+    if (!cleanQ) return [];
 
     const words = cleanQ.split(/\s+/).filter(Boolean);
     return allTracks
@@ -135,9 +148,10 @@ export const DeckQuickSearch: React.FC<DeckQuickSearchProps> = ({
   }, []);
 
   const handleSelectTrack = (track: DeckTrack) => {
-    onLoadTrack(track);
     setQuery('');
+    setLiveResults([]);
     setIsOpen(false);
+    onLoadTrack(track);
   };
 
   const handleLoadYouTube = (vidId: string) => {

@@ -29,6 +29,7 @@ interface CrateModalProps {
   onLoadMashupPreset: (preset: MashupPreset) => void;
   onAddCustomTrack: (track: DeckTrack) => void;
   customTracks: DeckTrack[];
+  resetTrigger?: number;
 }
 
 export const CrateModal: React.FC<CrateModalProps> = ({
@@ -38,6 +39,7 @@ export const CrateModal: React.FC<CrateModalProps> = ({
   onLoadMashupPreset,
   onAddCustomTrack,
   customTracks,
+  resetTrigger = 0,
 }) => {
   const [activeTab, setActiveTab] = useState<'presets' | 'tracks' | 'archive' | 'custom'>('presets');
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,6 +55,29 @@ export const CrateModal: React.FC<CrateModalProps> = ({
   const [isSearchingArchive, setIsSearchingArchive] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
   const [batchUrls, setBatchUrls] = useState('');
+
+  // Custom YouTube / Archive.org input states
+  const [customUrl, setCustomUrl] = useState('');
+  const [customTitle, setCustomTitle] = useState('');
+  const [customArtist, setCustomArtist] = useState('');
+  const [customBpm, setCustomBpm] = useState<number>(124);
+  const [customKey, setCustomKey] = useState('8A / Am');
+  const [customError, setCustomError] = useState<string | null>(null);
+
+  // Clear all song searches and results on load & whenever a song/preset loads
+  useEffect(() => {
+    setSearchQuery('');
+    setLiveResults([]);
+    setIsSearching(false);
+    setArchiveQuery('');
+    setArchiveResults([]);
+    setIsSearchingArchive(false);
+    setBatchUrls('');
+    setCustomUrl('');
+    setCustomTitle('');
+    setCustomArtist('');
+    setCustomError(null);
+  }, [resetTrigger]);
 
   // Debounced search in Track Crate Library tab (YouTube + Archive.org)
   useEffect(() => {
@@ -81,14 +106,6 @@ export const CrateModal: React.FC<CrateModalProps> = ({
 
     return () => clearTimeout(timer);
   }, [searchQuery, searchSource, customTracks]);
-
-  // Custom YouTube / Archive.org input states
-  const [customUrl, setCustomUrl] = useState('');
-  const [customTitle, setCustomTitle] = useState('');
-  const [customArtist, setCustomArtist] = useState('');
-  const [customBpm, setCustomBpm] = useState<number>(124);
-  const [customKey, setCustomKey] = useState('8A / Am');
-  const [customError, setCustomError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 

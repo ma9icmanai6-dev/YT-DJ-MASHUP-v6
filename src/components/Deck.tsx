@@ -1,5 +1,6 @@
 import React from 'react';
 import { DeckState, DeckTrack } from '../types/dj';
+import { createYTBackgroundPlayer } from '../services/youtube';
 import { TurntableJogWheel } from './TurntableJogWheel';
 import { DeckEQ } from './DeckEQ';
 import { DeckPitchBpm } from './DeckPitchBpm';
@@ -8,8 +9,7 @@ import { BeatLoop } from './BeatLoop';
 import { WaveformScrubber } from './WaveformScrubber';
 import { DeckQuickSearch } from './DeckQuickSearch';
 import { SlidingTitle } from './SlidingTitle';
-import { DeckTopFxBar } from './DeckTopFxBar';
-import { Play, Pause, Disc3, FolderOpen } from 'lucide-react';
+import { Play, Pause, FolderOpen } from 'lucide-react';
 
 interface DeckProps {
   state: DeckState;
@@ -40,6 +40,7 @@ interface DeckProps {
   onLoadTrack: (track: DeckTrack) => void;
   customTracks?: DeckTrack[];
   showVideo: boolean;
+  resetSearchTrigger?: number;
 }
 
 export const Deck: React.FC<DeckProps> = ({
@@ -59,7 +60,6 @@ export const Deck: React.FC<DeckProps> = ({
   onToggleKill,
   onChangeFilter,
   onChangeGain,
-  onChangeVolume,
   onTriggerCue,
   onDeleteCue,
   onSetLoop,
@@ -69,6 +69,7 @@ export const Deck: React.FC<DeckProps> = ({
   onOpenCrateModal,
   onLoadTrack,
   customTracks = [],
+  resetSearchTrigger = 0,
 }) => {
   const isDeckA = state.id === 'A';
   const accentColor = isDeckA ? 'cyan' : 'orange';
@@ -82,35 +83,65 @@ export const Deck: React.FC<DeckProps> = ({
 
   // Refs for the bottom-layer background video under each deck
   const archiveBgVideoRef = React.useRef<HTMLVideoElement | null>(null);
+  const ytBgControllerRef = React.useRef<Awaited<ReturnType<typeof createYTBackgroundPlayer>> | null>(null);
+  const lastLoadedVideoIdRef = React.useRef<string | null>(null);
   const lastSyncedTimeRef = React.useRef<number>(0);
 
   const isArchiveTrack = state.track?.source === 'archive' || Boolean(state.track?.videoId?.startsWith('ia:'));
   const youtubeVideoId = !isArchiveTrack && state.track?.videoId ? state.track.videoId : null;
+  const bgElementId = `deck-${state.id.toLowerCase()}-bg-player`;
+  const fallbackBgVideoId = isDeckA ? 'XwxLwG2_Sxk' : 'hGPL5rzd3tQ';
+
+  // Mount and control persistent YouTube background player under the deck (no iframe re-mount or flashing)
+  React.useEffect(() => {
+    const vidId = youtubeVideoId || fallbackBgVideoId;
+    const cue = state.track?.suggestedCue || 0;
+
+    if (!ytBgControllerRef.current) {
+      lastLoadedVideoIdRef.current = vidId;
+      createYTBackgroundPlayer(bgElementId, vidId, cue, fallbackBgVideoId).then((ctrl) => {
+        ytBgControllerRef.current = ctrl;
+        ctrl.ensurePlaying();
+      });
+    } else if (lastLoadedVideoIdRef.current !== vidId) {
+      lastLoadedVideoIdRef.current = vidId;
+      ytBgControllerRef.current.loadVideo(vidId, cue);
+    } else {
+      ytBgControllerRef.current.ensurePlaying();
+    }
+  }, [youtubeVideoId, bgElementId, fallbackBgVideoId, state.track?.suggestedCue]);
+
+  // Ensure background video stays playing when deck state toggles
+  React.useEffect(() => {
+    if (!isArchiveTrack && ytBgControllerRef.current) {
+      ytBgControllerRef.current.ensurePlaying();
+    }
+  }, [state.isPlaying, isArchiveTrack]);
 
   // Sync play/pause state with the bottom-layer Archive video on both decks
   React.useEffect(() => {
     if (isArchiveTrack && archiveBgVideoRef.current) {
       const vid = archiveBgVideoRef.current;
       vid.muted = true;
-      if (state.isPlaying) {
-        vid.play().catch(() => {});
-      } else {
-        vid.pause();
-      }
+      vid.play().catch(() => {});
     }
-  }, [state.isPlaying, isArchiveTrack]);
+  }, [state.isPlaying, isArchiveTrack, state.track?.mediaUrl]);
 
-  // Sync seek / cue jumps & playback rate with the bottom-layer Archive video
+  // Sync seek / cue jumps & playback rate with the bottom-layer video
   React.useEffect(() => {
     const drift = Math.abs(state.currentTime - lastSyncedTimeRef.current);
     lastSyncedTimeRef.current = state.currentTime;
 
-    if (drift > 1.5 && isArchiveTrack && archiveBgVideoRef.current) {
-      try {
-        archiveBgVideoRef.current.currentTime = state.currentTime;
-      } catch {}
+    if (drift > 2.5) {
+      if (isArchiveTrack && archiveBgVideoRef.current) {
+        try {
+          archiveBgVideoRef.current.currentTime = state.currentTime;
+        } catch {}
+      } else if (!isArchiveTrack && ytBgControllerRef.current && state.isPlaying) {
+        ytBgControllerRef.current.seekTo(state.currentTime);
+      }
     }
-  }, [state.currentTime, isArchiveTrack]);
+  }, [state.currentTime, isArchiveTrack, state.isPlaying]);
 
   React.useEffect(() => {
     const rate = Math.max(0.5, Math.min(2.0, 1 + state.pitch / 100));
@@ -118,82 +149,74 @@ export const Deck: React.FC<DeckProps> = ({
       try {
         archiveBgVideoRef.current.playbackRate = rate;
       } catch {}
+    } else if (!isArchiveTrack && ytBgControllerRef.current) {
+      ytBgControllerRef.current.setPlaybackRate(rate);
     }
   }, [state.pitch, isArchiveTrack]);
 
   return (
     <div className={`flex-1 flex flex-col bg-neutral-950 rounded-2xl border-2 ${accentBorder} p-2.5 sm:p-3 shadow-2xl gap-2.5 relative group`}>
-      {/* BOTTOM LAYER FULL-DECK LIVE VIDEO BACKGROUND: Plays under the entire deck on both sides */}
-      <div className="absolute inset-0 z-0 rounded-2xl overflow-hidden pointer-events-none select-none bg-black">
-        {/* Base Artwork Fallback Backdrop */}
-        <div className="absolute inset-0 z-0">
-          {state.track?.thumbnailUrl && (
-            <img
-              src={state.track.thumbnailUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              className={`w-full h-full object-cover scale-110 pointer-events-none filter contrast-125 saturate-150 transition-opacity duration-500 ${
-                state.isPlaying ? 'opacity-45' : 'opacity-60 group-hover:opacity-70'
-              }`}
-            />
-          )}
-        </div>
+      {/* BOTTOM LAYER FULL-DECK LIVE VIDEO BACKGROUND: Plays under the entire deck on both sides without flashing */}
+      <div
+        className="absolute inset-0 z-0 rounded-2xl overflow-hidden pointer-events-none select-none bg-black"
+        style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+      >
+        {/* Static Artwork Base Fallback (no opacity transition or filter thrashing) */}
+        {state.track?.thumbnailUrl && (
+          <img
+            src={state.track.thumbnailUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="absolute inset-0 z-0 w-full h-full object-cover scale-105 opacity-35 pointer-events-none"
+          />
+        )}
 
-        {/* Live YouTube Video Playing on Bottom Layer Under Deck (static src per track so it NEVER reloads or flashes!) */}
+        {/* Persistent Live YouTube Video Playing on Bottom Layer Under Deck */}
         <div
-          className={`absolute inset-0 z-[1] overflow-hidden transition-opacity duration-500 ${
-            youtubeVideoId ? (state.isPlaying ? 'opacity-90' : 'opacity-45') : 'opacity-0'
+          className={`absolute inset-0 z-[1] overflow-hidden ${
+            isArchiveTrack && state.track?.mediaType !== 'audio' ? 'opacity-0' : 'opacity-80'
           }`}
+          style={{ transform: 'translateZ(0)' }}
         >
-          {youtubeVideoId && (
-            <iframe
-              key={youtubeVideoId}
-              src={`https://www.youtube-nocookie.com/embed/${youtubeVideoId}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3&loop=1&playlist=${youtubeVideoId}&start=${state.track?.suggestedCue || 0}`}
-              title={`Deck ${state.id} Background Video`}
-              allow="autoplay; encrypted-media"
-              className="w-[210%] h-[210%] -top-[55%] -left-[55%] absolute object-cover pointer-events-none filter contrast-125 saturate-150"
-            />
-          )}
+          <div className="w-[200%] h-[200%] -top-[50%] -left-[50%] absolute pointer-events-none">
+            <div id={bgElementId} className="w-full h-full pointer-events-none" />
+          </div>
         </div>
 
         {/* Live Archive.org Video Playing on Bottom Layer Under Deck */}
         <div
-          className={`absolute inset-0 z-[2] overflow-hidden transition-opacity duration-300 ${
+          className={`absolute inset-0 z-[2] overflow-hidden ${
             isArchiveTrack && state.track?.mediaUrl && state.track?.mediaType !== 'audio'
-              ? state.isPlaying
-                ? 'opacity-90'
-                : 'opacity-55'
+              ? 'opacity-85'
               : 'opacity-0'
           }`}
+          style={{ transform: 'translateZ(0)' }}
         >
           <video
             ref={archiveBgVideoRef}
             src={isArchiveTrack && state.track?.mediaType !== 'audio' ? state.track?.mediaUrl : undefined}
             muted
+            autoPlay
             loop
             playsInline
-            className="w-full h-full object-cover scale-110 pointer-events-none filter contrast-125 saturate-150"
+            className="w-full h-full object-cover scale-105 pointer-events-none"
           />
         </div>
 
-        {/* Translucent Smoked Glass Overlay so the live bottom-layer video shines through clearly while keeping DJ controls crisp */}
-        <div
-          className={`absolute inset-0 z-[3] pointer-events-none transition-colors duration-300 ${
-            state.isPlaying ? 'bg-neutral-950/35' : 'bg-neutral-950/55'
-          }`}
-        />
+        {/* Clean Dark Tint Overlay (no backdrop-filter so cross-origin video never flickers) */}
+        <div className="absolute inset-0 z-[3] pointer-events-none bg-neutral-950/45" />
 
         {/* Subtle neon deck edge vignette */}
         <div
           className={`absolute inset-0 z-[4] pointer-events-none ${
             isDeckA
-              ? 'bg-gradient-to-b from-cyan-950/25 via-transparent to-black/60'
-              : 'bg-gradient-to-b from-amber-950/25 via-transparent to-black/60'
+              ? 'bg-gradient-to-b from-cyan-950/20 via-transparent to-black/55'
+              : 'bg-gradient-to-b from-amber-950/20 via-transparent to-black/55'
           }`}
         />
       </div>
 
-      {/* Real GUI controls sit in z-10 with translucent glass styling so video underneath is visible */}
+      {/* Real GUI controls sit in z-10 with clean translucent styling (no backdrop-blur) so video underneath is rock-solid */}
       <div className="relative z-10 flex flex-col gap-2.5 flex-1 justify-between">
         {/* Deck Header: Deck Badge & Track Info & Quick Search & Load Track */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-neutral-800/80 pb-2 gap-2">
@@ -221,12 +244,12 @@ export const Deck: React.FC<DeckProps> = ({
                 title={state.track ? state.track.title : `Deck ${state.id} Empty`}
                 className="text-sm font-bold text-white leading-snug"
               />
-              <div className="flex items-center gap-2 text-xs text-neutral-400 truncate mt-0.5">
+              <div className="flex items-center gap-2 text-xs text-neutral-300 truncate mt-0.5">
                 <span className="truncate">{state.track ? state.track.artist : 'Load a track to start'}</span>
                 {state.track?.genre && (
                   <>
-                    <span aria-hidden="true" className="text-neutral-600">·</span>
-                    <span className="text-neutral-500 truncate">{state.track.genre}</span>
+                    <span aria-hidden="true" className="text-neutral-500">·</span>
+                    <span className="text-neutral-400 truncate">{state.track.genre}</span>
                   </>
                 )}
               </div>
@@ -241,6 +264,7 @@ export const Deck: React.FC<DeckProps> = ({
               onLoadTrack={onLoadTrack}
               accentColor={accentColor}
               customTracks={customTracks}
+              resetTrigger={resetSearchTrigger}
             />
 
             {/* Load Track Button */}
@@ -277,10 +301,10 @@ export const Deck: React.FC<DeckProps> = ({
               {/* CUE Button */}
               <button
                 onClick={onCue}
-                className={`flex-1 h-16 rounded-xl flex flex-col items-center justify-center font-mono font-black text-sm tracking-wider uppercase border transition-all active:scale-95 shadow-md backdrop-blur-[1px] ${
+                className={`flex-1 h-16 rounded-xl flex flex-col items-center justify-center font-mono font-black text-sm tracking-wider uppercase border transition-all active:scale-95 shadow-md ${
                   isDeckA
-                    ? 'bg-cyan-950/55 text-cyan-300 border-cyan-500/50 hover:bg-cyan-500/25 active:bg-cyan-500 active:text-black'
-                    : 'bg-amber-950/55 text-amber-300 border-amber-500/50 hover:bg-amber-500/25 active:bg-amber-500 active:text-black'
+                    ? 'bg-cyan-950/75 text-cyan-300 border-cyan-500/50 hover:bg-cyan-500/25 active:bg-cyan-500 active:text-black'
+                    : 'bg-amber-950/75 text-amber-300 border-amber-500/50 hover:bg-amber-500/25 active:bg-amber-500 active:text-black'
                 }`}
                 title="Cue: Return to cue point and pause (Hold to preview)"
               >
@@ -291,10 +315,10 @@ export const Deck: React.FC<DeckProps> = ({
               {/* PLAY / PAUSE Button */}
               <button
                 onClick={onPlayPause}
-                className={`flex-1 h-16 rounded-xl flex flex-col items-center justify-center font-mono font-black text-sm tracking-wider uppercase border transition-all active:scale-95 shadow-md backdrop-blur-[1px] ${
+                className={`flex-1 h-16 rounded-xl flex flex-col items-center justify-center font-mono font-black text-sm tracking-wider uppercase border transition-all active:scale-95 shadow-md ${
                   state.isPlaying
-                    ? 'bg-emerald-500 text-black border-emerald-400 shadow-emerald-500/40 animate-pulse'
-                    : 'bg-neutral-950/60 text-emerald-400 border-emerald-500/50 hover:bg-neutral-900/75'
+                    ? 'bg-emerald-500 text-black border-emerald-400 shadow-emerald-500/40'
+                    : 'bg-neutral-950/75 text-emerald-400 border-emerald-500/50 hover:bg-neutral-900/85'
                 }`}
                 title={state.isPlaying ? 'Pause Deck' : 'Play Deck'}
               >

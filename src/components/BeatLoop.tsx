@@ -28,7 +28,7 @@ export const BeatLoop: React.FC<BeatLoopProps> = ({
   const activeGlow = isCyan ? 'shadow-cyan-500/40 border-cyan-400' : 'shadow-amber-500/40 border-amber-400';
 
   return (
-    <div className="bg-neutral-950/50 backdrop-blur-[1px] p-3 rounded-lg border border-neutral-800/80 shadow-inner">
+    <div className="bg-neutral-950/65 p-3 rounded-lg border border-neutral-800/80 shadow-inner">
       <div className="flex items-center justify-between border-b border-neutral-800 pb-1.5 mb-2.5">
         <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 font-bold flex items-center gap-1.5">
           <Repeat className="w-3 h-3 text-neutral-400" />
@@ -40,7 +40,7 @@ export const BeatLoop: React.FC<BeatLoopProps> = ({
           onClick={onToggleLoop}
           className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider uppercase transition-all border active:scale-95 flex items-center gap-1 ${
             loopActive
-              ? `${activeBg} shadow-md ${activeGlow} animate-pulse`
+              ? `${activeBg} shadow-md ${activeGlow}`
               : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:text-white'
           }`}
           title="Toggle active loop on/off"

@@ -82,6 +82,160 @@ const activeYtHandlers = new Map<
   }
 >();
 
+const activeBgPlayers = new Map<
+  string,
+  {
+    loadVideo: (videoId: string, startSeconds?: number) => void;
+    ensurePlaying: () => void;
+    seekTo: (seconds: number) => void;
+    setPlaybackRate: (rate: number) => void;
+  }
+>();
+
+/**
+ * Dedicated flicker-free muted background YouTube video player for the bottom layer under each Deck.
+ * Never unmounts the iframe when switching tracks and automatically loops and recovers on error.
+ */
+export async function createYTBackgroundPlayer(
+  elementId: string,
+  initialVideoId: string,
+  initialStartSeconds: number = 0,
+  fallbackVideoId: string = 'dwDns8x3Jb4'
+) {
+  const existing = activeBgPlayers.get(elementId);
+  if (existing) {
+    existing.loadVideo(initialVideoId, initialStartSeconds);
+    return existing;
+  }
+
+  let rawPlayer: any = null;
+  let isReady = false;
+  let currentId = initialVideoId;
+  let currentStart = initialStartSeconds;
+  let pendingLoad: { id: string; start: number } | null = null;
+
+  const controller = {
+    loadVideo: (videoId: string, startSeconds: number = 0) => {
+      if (!videoId) return;
+      if (currentId === videoId && isReady && rawPlayer) {
+        controller.ensurePlaying();
+        return;
+      }
+      currentId = videoId;
+      currentStart = startSeconds;
+      if (!isReady || !rawPlayer) {
+        pendingLoad = { id: videoId, start: startSeconds };
+        return;
+      }
+      try {
+        if (typeof rawPlayer.mute === 'function') rawPlayer.mute();
+        if (typeof rawPlayer.loadVideoById === 'function') {
+          rawPlayer.loadVideoById({ videoId, startSeconds });
+        }
+      } catch {}
+    },
+    ensurePlaying: () => {
+      if (!isReady || !rawPlayer) return;
+      try {
+        if (typeof rawPlayer.mute === 'function') rawPlayer.mute();
+        const st = typeof rawPlayer.getPlayerState === 'function' ? rawPlayer.getPlayerState() : -1;
+        if (st !== 1 && st !== 3 && typeof rawPlayer.playVideo === 'function') {
+          rawPlayer.playVideo();
+        }
+      } catch {}
+    },
+    seekTo: (seconds: number) => {
+      if (!isReady || !rawPlayer) return;
+      try {
+        if (typeof rawPlayer.seekTo === 'function') {
+          rawPlayer.seekTo(Math.max(0, seconds), true);
+        }
+      } catch {}
+    },
+    setPlaybackRate: (rate: number) => {
+      if (!isReady || !rawPlayer) return;
+      try {
+        if (typeof rawPlayer.setPlaybackRate === 'function') {
+          rawPlayer.setPlaybackRate(Math.max(0.5, Math.min(2.0, rate)));
+        }
+      } catch {}
+    },
+  };
+
+  activeBgPlayers.set(elementId, controller);
+
+  await loadYouTubeIframeApi();
+
+  const el = document.getElementById(elementId);
+  if (!el) {
+    activeBgPlayers.delete(elementId);
+    return controller;
+  }
+
+  rawPlayer = new window.YT.Player(elementId, {
+    videoId: currentId,
+    width: '100%',
+    height: '100%',
+    playerVars: {
+      autoplay: 1,
+      mute: 1,
+      controls: 0,
+      disablekb: 1,
+      enablejsapi: 1,
+      fs: 0,
+      iv_load_policy: 3,
+      modestbranding: 1,
+      playsinline: 1,
+      rel: 0,
+      start: Math.max(0, Math.floor(currentStart)),
+    },
+    events: {
+      onReady: () => {
+        isReady = true;
+        try {
+          const iframe = typeof rawPlayer.getIframe === 'function' ? rawPlayer.getIframe() : null;
+          if (iframe) {
+            iframe.setAttribute('allow', 'autoplay; encrypted-media');
+            iframe.style.pointerEvents = 'none';
+          }
+          if (typeof rawPlayer.mute === 'function') rawPlayer.mute();
+          if (pendingLoad) {
+            const { id, start } = pendingLoad;
+            pendingLoad = null;
+            rawPlayer.loadVideoById({ videoId: id, startSeconds: start });
+          } else if (typeof rawPlayer.playVideo === 'function') {
+            rawPlayer.playVideo();
+          }
+        } catch {}
+      },
+      onStateChange: (event: any) => {
+        try {
+          if (typeof rawPlayer.mute === 'function') rawPlayer.mute();
+          // Loop seamlessly if ended (0) or restart if paused/cued (2, 5)
+          if (event.data === 0) {
+            rawPlayer.seekTo(currentStart || 0, true);
+            rawPlayer.playVideo();
+          } else if (event.data === 2 || event.data === 5 || event.data === -1) {
+            rawPlayer.playVideo();
+          }
+        } catch {}
+      },
+      onError: () => {
+        // Fallback so deck background video is never blank or flashing error screen
+        if (currentId !== fallbackVideoId) {
+          currentId = fallbackVideoId;
+          try {
+            if (typeof rawPlayer.mute === 'function') rawPlayer.mute();
+            rawPlayer.loadVideoById({ videoId: fallbackVideoId, startSeconds: 10 });
+          } catch {}
+        }
+      },
+    },
+  });
+
+  return controller;
+}
+
 function computeBoostedYtVolume(vol: number): number {
   if (vol <= 0) return 0;
   const normalized = Math.max(0, vol) / 100;

@@ -47,23 +47,23 @@ export const Header: React.FC<HeaderProps> = ({
   const compatibility = keyA && keyB ? checkKeyCompatibility(keyA, keyB) : null;
 
   return (
-    <header className="w-full bg-neutral-950 border-b border-neutral-800 px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-xl select-none">
+    <header className="w-full bg-neutral-950 border-b border-neutral-800 px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 shadow-lg select-none">
       {/* Brand & Identity */}
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-          <div className="w-full h-full bg-neutral-950 rounded-[10px] flex items-center justify-center">
-            <Disc className="w-5 h-5 text-cyan-400" />
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 p-0.5 flex items-center justify-center shadow-md shadow-cyan-500/20">
+          <div className="w-full h-full bg-neutral-950 rounded-[7px] flex items-center justify-center">
+            <Disc className="w-4 h-4 text-cyan-400" />
           </div>
         </div>
 
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-base sm:text-lg font-mono font-black tracking-tight text-white uppercase">
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-sm sm:text-base font-mono font-black tracking-tight text-white uppercase leading-none">
               DJ YOUTUBE MASHUP
             </h1>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400" />
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400" />
           </div>
-          <div className="flex items-center gap-2 text-[10px] font-mono text-neutral-400">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400 leading-tight mt-0.5">
             <span>DUAL-DECK MIXING STUDIO</span>
             <span aria-hidden="true">·</span>
             <span>PRO AUDIO & VJ CONSOLE</span>
@@ -73,9 +73,9 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Harmonic Key Compatibility Pill */}
       {compatibility && (
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-lg text-xs font-mono">
+        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 bg-neutral-900 border border-neutral-800 rounded-lg text-xs font-mono">
           <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-neutral-400 font-medium">Harmonic Compatibility:</span>
+          <span className="text-neutral-400 font-medium">Harmonic:</span>
           <span
             className={`font-bold ${
               compatibility.match ? 'text-emerald-400' : 'text-amber-400'
@@ -90,12 +90,12 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* View Mode Segmented Controls & Action Tools */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
         {/* Display Mode Switcher */}
         <div className="flex items-center p-0.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs font-mono">
           <button
             onClick={() => onChangeDisplayMode('dual')}
-            className={`px-2.5 py-1.5 rounded-md font-semibold transition-all ${
+            className={`px-2 py-1 rounded-md font-semibold transition-all ${
               displayMode === 'dual'
                 ? 'bg-neutral-800 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-white'
@@ -107,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => onChangeDisplayMode('blend')}
-            className={`px-2.5 py-1.5 rounded-md font-semibold transition-all flex items-center gap-1 ${
+            className={`px-2 py-1 rounded-md font-semibold transition-all flex items-center gap-1 ${
               displayMode === 'blend'
                 ? 'bg-neutral-800 text-cyan-300 shadow-sm'
                 : 'text-neutral-400 hover:text-white'
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => onChangeDisplayMode('audio-only')}
-            className={`px-2.5 py-1.5 rounded-md font-semibold transition-all ${
+            className={`px-2 py-1 rounded-md font-semibold transition-all ${
               displayMode === 'audio-only'
                 ? 'bg-neutral-800 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-white'
@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Crate Modal Button */}
         <button
           onClick={onOpenCrateModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-amber-500 hover:bg-amber-400 text-black transition-all active:scale-95 shadow-md"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-500 hover:bg-amber-400 text-black transition-all active:scale-95 shadow-sm"
           title="Browse Curated Mashups & Crate Tracks"
         >
           <FolderOpen className="w-3.5 h-3.5" />
@@ -144,9 +144,9 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Record / Recipe Button */}
         <button
           onClick={onOpenRecordingModal}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 ${
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 ${
             isRecording
-              ? 'bg-red-500 text-white border-red-400 shadow-md shadow-red-500/30 animate-pulse'
+              ? 'bg-red-500 text-white border-red-400 shadow-md shadow-red-500/30'
               : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800'
           }`}
           title="Record live DJ set and export mashup recipe"
@@ -159,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({
         {onOpenMidiModal && (
           <button
             onClick={onOpenMidiModal}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 ${
               connectedControllersCount > 0
                 ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-sm'
                 : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-neutral-800'
@@ -176,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Shortcuts Button */}
         <button
           onClick={onOpenShortcutsModal}
-          className="p-2 rounded-lg text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors"
+          className="p-1.5 rounded-lg text-neutral-400 hover:text-white bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-colors"
           title="Keyboard Shortcuts Map"
         >
           <Keyboard className="w-4 h-4" />
@@ -185,7 +185,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Sound FX Mute Toggle */}
         <button
           onClick={onToggleMute}
-          className={`p-2 rounded-lg border transition-colors ${
+          className={`p-1.5 rounded-lg border transition-colors ${
             isMuted
               ? 'bg-red-950/60 border-red-800 text-red-400'
               : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'

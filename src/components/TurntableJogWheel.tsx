@@ -122,9 +122,10 @@ export const TurntableJogWheel: React.FC<TurntableJogWheelProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className={`relative w-48 h-48 sm:w-56 sm:h-56 rounded-full cursor-grab active:cursor-grabbing select-none p-2 bg-black/55 backdrop-blur-[1px] shadow-2xl border-2 transition-all duration-200 touch-none ${
-          isDragging ? `${glowBorder} shadow-lg scale-[1.01]` : 'border-neutral-700/80'
+        className={`relative w-48 h-48 sm:w-56 sm:h-56 rounded-full cursor-grab active:cursor-grabbing select-none p-2 bg-black/65 shadow-2xl border-2 transition-colors duration-200 touch-none ${
+          isDragging ? `${glowBorder} shadow-lg` : 'border-neutral-700/80'
         }`}
+        style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
         title="Interactive Turntable: Drag to scratch and scrub audio"
       >
         {/* Platter outer edge strobe grooves */}
@@ -138,7 +139,7 @@ export const TurntableJogWheel: React.FC<TurntableJogWheelProps> = ({
               src={thumbnailUrl}
               alt=""
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover opacity-45 scale-105 pointer-events-none filter contrast-125"
+              className="w-full h-full object-cover opacity-40 scale-105 pointer-events-none"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/50 pointer-events-none" />
@@ -146,9 +147,10 @@ export const TurntableJogWheel: React.FC<TurntableJogWheelProps> = ({
 
         {/* Vinyl Record Disc Body with Acrylic Smoked Glass Transparency */}
         <div
-          className="w-full h-full rounded-full relative flex items-center justify-center overflow-hidden"
+          className="w-full h-full rounded-full relative flex items-center justify-center overflow-hidden will-change-transform"
           style={{
-            transform: `rotate(${rotation}deg)`,
+            transform: `translateZ(0) rotate(${rotation}deg)`,
+            backfaceVisibility: 'hidden',
             background: `radial-gradient(circle, rgba(20,20,20,0.35) 0%, rgba(12,12,12,0.45) 45%, rgba(5,5,5,0.6) 100%)`,
             boxShadow: 'inset 0 0 20px rgba(0,0,0,0.7), inset 0 0 4px rgba(255,255,255,0.15)',
           }}

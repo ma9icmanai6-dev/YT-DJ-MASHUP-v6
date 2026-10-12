@@ -130,7 +130,7 @@ export const DeckEQ: React.FC<DeckEQProps> = ({
   const boostPercent = Math.round(Math.pow(10, gain / 20) * 100);
 
   return (
-    <div className="bg-neutral-950/50 backdrop-blur-[1px] p-3 rounded-lg border border-neutral-800/80 shadow-inner flex flex-col gap-2.5">
+    <div className="bg-neutral-950/65 p-3 rounded-lg border border-neutral-800/80 shadow-inner flex flex-col gap-2.5">
       <div className="flex items-center justify-between border-b border-neutral-800/80 pb-1.5">
         <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-300 font-bold">
           3-Band EQ & Filter

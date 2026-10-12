@@ -108,69 +108,54 @@ export const MasterMixer: React.FC<MasterMixerProps> = ({
   return (
     <div className="w-full lg:w-72 flex flex-col bg-neutral-900 border border-neutral-800 rounded-xl p-3 shadow-2xl justify-between gap-2.5">
       {/* Mixer Header with Little Buttons Next to Master Mixer */}
-      <div className="flex flex-col gap-1.5 border-b border-neutral-800 pb-2">
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-1.5 text-neutral-300 shrink-0">
-            <Sliders className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-[11px] font-mono font-bold tracking-wider uppercase">
-              MASTER MIXER
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Little Random Mashup Button Next to Master Mixer */}
-            {onRandomMashup && (
-              <button
-                onClick={onRandomMashup}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 hover:from-pink-400 hover:to-amber-400 text-black transition-all active:scale-95 shadow-sm"
-                title="Auto-load a matched Top Acapella + Top Instrumental Mashup (Songs, Lyrics & Beats Locked)"
-              >
-                <Shuffle className="w-2.5 h-2.5 stroke-[2.5]" />
-                <span>RANDOM</span>
-              </button>
-            )}
-
-            {/* Little 1-Click Dual Deck Max Volume Boost Button Next to Master Mixer */}
-            <button
-              onClick={() => {
-                onChangeVolumeA(150);
-                onChangeVolumeB(150);
-                onChangeMasterVolume(100);
-                onChangeCrossfader(0);
-                if (onChangeGainA) onChangeGainA(12);
-                if (onChangeGainB) onChangeGainB(12);
-              }}
-              className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-emerald-500 hover:bg-emerald-400 text-black transition-all active:scale-95 shadow-sm"
-              title="Boost both Deck A & Deck B to Maximum +12dB Overdrive"
-            >
-              MAX BOOST A+B
-            </button>
-          </div>
+      <div className="flex items-center justify-between gap-1 border-b border-neutral-800 pb-2">
+        <div className="flex items-center gap-1.5 text-neutral-300 shrink-0">
+          <Sliders className="w-3.5 h-3.5 text-amber-400" />
+          <span className="text-[11px] font-mono font-bold tracking-wider uppercase">
+            MASTER MIXER
+          </span>
         </div>
 
-        {/* Compact Active Random Mashup Info Pill (only when a Random Mashup is loaded) */}
-        {activeRandomMashup && (
-          <div className="bg-neutral-950/90 border border-purple-500/40 rounded-lg px-2 py-1.5 text-[10px] font-mono flex flex-col gap-0.5">
-            <div className="flex items-center justify-between gap-1">
-              <span className="font-black text-amber-300 truncate">
-                {activeRandomMashup.title}
-              </span>
-              {onSwapRandomMashupDecks && (
-                <button
-                  onClick={onSwapRandomMashupDecks}
-                  className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-cyan-300 font-bold flex items-center gap-0.5 shrink-0"
-                  title="Swap Vocals & Beat Decks"
-                >
-                  <ArrowLeftRight className="w-2.5 h-2.5" />
-                  <span>A↔B</span>
-                </button>
-              )}
-            </div>
-            <div className="text-[9px] text-neutral-300 leading-tight line-clamp-2">
-              <strong className="text-cyan-300">Key/Beat:</strong> {activeRandomMashup.songsMatchReason}
-            </div>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          {/* Little Random Mashup Button Next to Master Mixer */}
+          {onRandomMashup && (
+            <button
+              onClick={onRandomMashup}
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 hover:from-pink-400 hover:to-amber-400 text-black transition-all active:scale-95 shadow-sm"
+              title="Auto-load a matched Top Acapella + Top Instrumental Mashup"
+            >
+              <Shuffle className="w-2.5 h-2.5 stroke-[2.5]" />
+              <span>RANDOM</span>
+            </button>
+          )}
+
+          {activeRandomMashup && onSwapRandomMashupDecks && (
+            <button
+              onClick={onSwapRandomMashupDecks}
+              className="px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-cyan-300 text-[10px] font-mono font-bold flex items-center gap-0.5 shrink-0 border border-neutral-700"
+              title="Swap Vocals & Beat Decks (A ↔ B)"
+            >
+              <ArrowLeftRight className="w-2.5 h-2.5" />
+              <span>A↔B</span>
+            </button>
+          )}
+
+          {/* Little 1-Click Dual Deck Max Volume Boost Button Next to Master Mixer */}
+          <button
+            onClick={() => {
+              onChangeVolumeA(150);
+              onChangeVolumeB(150);
+              onChangeMasterVolume(100);
+              onChangeCrossfader(0);
+              if (onChangeGainA) onChangeGainA(12);
+              if (onChangeGainB) onChangeGainB(12);
+            }}
+            className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-emerald-500 hover:bg-emerald-400 text-black transition-all active:scale-95 shadow-sm"
+            title="Boost both Deck A & Deck B to Maximum +12dB Overdrive"
+          >
+            MAX BOOST A+B
+          </button>
+        </div>
       </div>
 
       {/* Main Channel Faders & Peak Meters Section */}
