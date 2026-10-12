@@ -11,6 +11,7 @@ import {
   VolumeX,
   Sparkles,
   Shuffle,
+  Zap,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -23,6 +24,7 @@ interface HeaderProps {
   onOpenRecordingModal: () => void;
   onOpenShortcutsModal: () => void;
   onOpenMidiModal?: () => void;
+  onOpenMixxxFx?: () => void;
   connectedControllersCount?: number;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -39,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenRecordingModal,
   onOpenShortcutsModal,
   onOpenMidiModal,
+  onOpenMixxxFx,
   connectedControllersCount = 0,
   isMuted,
   onToggleMute,
@@ -170,6 +173,18 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">
               {connectedControllersCount > 0 ? `MIDI (${connectedControllersCount})` : 'CONTROLLER'}
             </span>
+          </button>
+        )}
+
+        {/* Mixxx Built-in DSP Effects Suite Button */}
+        {onOpenMixxxFx && (
+          <button
+            onClick={onOpenMixxxFx}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30 shadow-sm"
+            title="Mixxx Built-in Effects Suite (Modular Rack, Super Knob, Echo, Flanger, Reverb, Filter)"
+          >
+            <Zap className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">MIXXX FX</span>
           </button>
         )}
 

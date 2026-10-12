@@ -545,7 +545,9 @@ export function createArchivePlayer(
   const onPlay = () => handlers.onStateChange?.(1);
   const onPause = () => handlers.onStateChange?.(2);
   const onEnded = () => handlers.onStateChange?.(0);
-  const onError = (e: Event) => handlers.onError?.(e);
+  const onError: OnErrorEventHandler = (event) => {
+    handlers.onError?.(event as any);
+  };
 
   el.onloadedmetadata = onLoadedMetadata;
   el.onplay = onPlay;

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { DeckState, DeckTrack, CrossfaderCurve, MashupPreset, MixHistoryEvent, RandomMashupPairing } from './types/dj';
+import { DeckState, DeckTrack, CrossfaderCurve, MashupPreset, MixHistoryEvent, RandomMashupPairing, NeuralMixStems } from './types/dj';
 import { POPULAR_TRACKS, getRandomCompatMashupPairing } from './data/presets';
 import { createYTPlayer, createArchivePlayer, YTPlayerWrapper } from './services/youtube';
 import { audioFx } from './services/audioFx';
 import { Header } from './components/Header';
+import { TopLyricsBar } from './components/TopLyricsBar';
 import { TopMashupVideoStage } from './components/TopMashupVideoStage';
 import { Deck } from './components/Deck';
 import { MasterMixer } from './components/MasterMixer';
+import { MixxxEffectsModal } from './components/MixxxEffectsModal';
 import { MidiControllerModal } from './components/MidiControllerModal';
 import { DjControllerEngine, ControllerDevice, DjActionKey } from './services/controller';
 import { CrateModal } from './components/CrateModal';
@@ -44,6 +46,15 @@ export default function App() {
     pfl: false,
     isScratching: false,
     vinylAngle: 0,
+    neuralMix: {
+      vocals: 100,
+      drums: 100,
+      instruments: 100,
+      vocalMute: false,
+      drumMute: false,
+      instrumentMute: false,
+      soloStem: null,
+    },
   });
 
   // Deck B State
@@ -71,6 +82,15 @@ export default function App() {
     pfl: false,
     isScratching: false,
     vinylAngle: 0,
+    neuralMix: {
+      vocals: 100,
+      drums: 100,
+      instruments: 100,
+      vocalMute: false,
+      drumMute: false,
+      instrumentMute: false,
+      soloStem: null,
+    },
   });
 
   // Master Mixer State
@@ -85,6 +105,7 @@ export default function App() {
   const [isCrateModalOpen, setIsCrateModalOpen] = useState<boolean>(false);
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState<boolean>(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
+  const [isMixxxFxModalOpen, setIsMixxxFxModalOpen] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [embedErrorA, setEmbedErrorA] = useState<boolean>(false);
   const [embedErrorB, setEmbedErrorB] = useState<boolean>(false);
@@ -116,6 +137,14 @@ export default function App() {
       fetch('/api/cache/clear', { method: 'POST' }).catch(() => {});
     } catch {}
     setSearchResetTrigger((prev) => prev + 1);
+  }, []);
+
+  const handleUpdateNeuralMix = useCallback((deckId: 'A' | 'B', stems: NeuralMixStems) => {
+    if (deckId === 'A') {
+      setDeckA((prev) => ({ ...prev, neuralMix: stems }));
+    } else {
+      setDeckB((prev) => ({ ...prev, neuralMix: stems }));
+    }
   }, []);
 
   useEffect(() => {
@@ -173,29 +202,42 @@ export default function App() {
       cfWeightB = crossfader < -0.9 ? 0 : 1;
     }
 
-    // 3-Band EQ calculation (Low/Bass: 45%, Mid/Vocal: 35%, High/Treble: 20%)
+    // 3-Band EQ & Neural Mix Stems calculation (Low/Bass: 45%, Mid/Vocal: 35%, High/Treble: 20%)
     const lowMultA = deckA.eqKill.low ? 0 : Math.max(0, 1 + deckA.eq.low / 100);
     const midMultA = deckA.eqKill.mid ? 0 : Math.max(0, 1 + deckA.eq.mid / 100);
     const highMultA = deckA.eqKill.high ? 0 : Math.max(0, 1 + deckA.eq.high / 100);
     const eqScaleA = 0.45 * lowMultA + 0.35 * midMultA + 0.20 * highMultA;
 
+    // Neural Mix Stem multipliers (Vocals, Drums, Instruments)
+    const stemsA = deckA.neuralMix || { vocals: 100, drums: 100, instruments: 100, vocalMute: false, drumMute: false, instrumentMute: false, soloStem: null };
+    const vocalMultA = (stemsA.vocalMute || (stemsA.soloStem && stemsA.soloStem !== 'vocals')) ? 0 : stemsA.vocals / 100;
+    const drumMultA = (stemsA.drumMute || (stemsA.soloStem && stemsA.soloStem !== 'drums')) ? 0 : stemsA.drums / 100;
+    const instMultA = (stemsA.instrumentMute || (stemsA.soloStem && stemsA.soloStem !== 'instruments')) ? 0 : stemsA.instruments / 100;
+    const stemScaleA = 0.40 * drumMultA + 0.35 * vocalMultA + 0.25 * instMultA;
+
     const filterAttenA = deckA.filter < 0
       ? Math.max(0.15, 1 + (deckA.filter / 100) * 0.75)
       : Math.max(0.15, 1 - (deckA.filter / 100) * 0.75);
 
-    const totalEqFactorA = Math.max(0, Math.min(2.0, eqScaleA * filterAttenA));
+    const totalEqFactorA = Math.max(0, Math.min(2.0, eqScaleA * filterAttenA * stemScaleA));
 
-    // Deck B EQ
+    // Deck B EQ & Neural Mix Stems
     const lowMultB = deckB.eqKill.low ? 0 : Math.max(0, 1 + deckB.eq.low / 100);
-    const midMultB = deckB.eqKill.mid ? 0 : Math.max(0, 1 + deckB.eq.mid / 100);
+    const midMultB = deckB.eqKill.mid ? 0 : Math.max(0, 1 + deckB.eq.low / 100);
     const highMultB = deckB.eqKill.high ? 0 : Math.max(0, 1 + deckB.eq.high / 100);
     const eqScaleB = 0.45 * lowMultB + 0.35 * midMultB + 0.20 * highMultB;
+
+    const stemsB = deckB.neuralMix || { vocals: 100, drums: 100, instruments: 100, vocalMute: false, drumMute: false, instrumentMute: false, soloStem: null };
+    const vocalMultB = (stemsB.vocalMute || (stemsB.soloStem && stemsB.soloStem !== 'vocals')) ? 0 : stemsB.vocals / 100;
+    const drumMultB = (stemsB.drumMute || (stemsB.soloStem && stemsB.soloStem !== 'drums')) ? 0 : stemsB.drums / 100;
+    const instMultB = (stemsB.instrumentMute || (stemsB.soloStem && stemsB.soloStem !== 'instruments')) ? 0 : stemsB.instruments / 100;
+    const stemScaleB = 0.40 * drumMultB + 0.35 * vocalMultB + 0.25 * instMultB;
 
     const filterAttenB = deckB.filter < 0
       ? Math.max(0.15, 1 + (deckB.filter / 100) * 0.75)
       : Math.max(0.15, 1 - (deckB.filter / 100) * 0.75);
 
-    const totalEqFactorB = Math.max(0, Math.min(2.0, eqScaleB * filterAttenB));
+    const totalEqFactorB = Math.max(0, Math.min(2.0, eqScaleB * filterAttenB * stemScaleB));
 
     // Preamp Gain Boost multiplier (0dB = 1.0x, +6dB = 2.0x, +12dB = 4.0x)
     const preampGainA = Math.pow(10, (deckA.gain || 0) / 20);
@@ -228,6 +270,8 @@ export default function App() {
     deckB.eqKill,
     deckA.filter,
     deckB.filter,
+    deckA.neuralMix,
+    deckB.neuralMix,
     deckA.isPlaying,
     deckB.isPlaying,
     masterVolume,
@@ -1198,6 +1242,7 @@ export default function App() {
           onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
           onOpenMidiModal={() => setIsMidiModalOpen(true)}
           connectedControllersCount={controllerDevices.length}
+          onOpenMixxxFx={() => setIsMixxxFxModalOpen(true)}
           isMuted={isMuted}
           onToggleMute={() => {
             setIsMuted(!isMuted);
@@ -1209,6 +1254,19 @@ export default function App() {
 
       {/* Main Console Layout */}
       <main className="relative z-10 flex-1 max-w-[1720px] w-full min-w-0 mx-auto px-2 sm:px-3 py-1.5 flex flex-col gap-2">
+        {/* Top Lyrics Bar: Real-Time Vocal Teleprompter HUD (Always visible on top) */}
+        <TopLyricsBar
+          trackA={deckA.track}
+          trackB={deckB.track}
+          currentTimeA={deckA.currentTime}
+          currentTimeB={deckB.currentTime}
+          isPlayingA={deckA.isPlaying}
+          isPlayingB={deckB.isPlaying}
+          crossfader={crossfader}
+          bpmA={deckA.effectiveBpm}
+          bpmB={deckB.effectiveBpm}
+        />
+
         {/* Top Mashup Video Stage: Dual YouTube videos mashed up at the top with Screen blend and CC for Accapella */}
         <TopMashupVideoStage
           trackA={deckA.track}
@@ -1264,6 +1322,7 @@ export default function App() {
             customTracks={customTracks}
             showVideo={false}
             resetSearchTrigger={searchResetTrigger}
+            onChangeNeuralMix={(stems) => handleUpdateNeuralMix('A', stems)}
           />
 
           {/* MASTER MIXER CONSOLE */}
@@ -1297,6 +1356,7 @@ export default function App() {
                 activeRandomMashup && handleRandomMashup(activeRandomMashup, !acapellaOnDeckA)
               }
               activeRandomMashup={activeRandomMashup}
+              onOpenMixxxFx={() => setIsMixxxFxModalOpen(true)}
             />
           </div>
 
@@ -1331,11 +1391,19 @@ export default function App() {
             customTracks={customTracks}
             showVideo={false}
             resetSearchTrigger={searchResetTrigger}
+            onChangeNeuralMix={(stems) => handleUpdateNeuralMix('B', stems)}
           />
         </div>
       </main>
 
       {/* Modals */}
+      <MixxxEffectsModal
+        isOpen={isMixxxFxModalOpen}
+        onClose={() => setIsMixxxFxModalOpen(false)}
+        bpmA={deckA.effectiveBpm}
+        bpmB={deckB.effectiveBpm}
+      />
+
       <MidiControllerModal
         isOpen={isMidiModalOpen}
         onClose={() => setIsMidiModalOpen(false)}

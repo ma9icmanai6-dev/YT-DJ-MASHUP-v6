@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DeckTrack } from '../types/dj';
-import { Eye, Layers, Maximize2 } from 'lucide-react';
+import { Eye, Layers, Maximize2, Sparkles } from 'lucide-react';
+import { AwesomeAudioVisualizer, VisualizerMode } from './AwesomeAudioVisualizer';
 
 interface VideoBlendViewerProps {
   deckATrack: DeckTrack | null;
@@ -19,6 +20,7 @@ export const VideoBlendViewer: React.FC<VideoBlendViewerProps> = ({
   isPlayingB,
   onToggleFullscreen,
 }) => {
+  const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('radial-pulse');
   // Map crossfader (-1 to +1) to opacity weights (0 to 1)
   // At -1: A=1, B=0. At 0: A=0.7, B=0.7 (additive / screen blend). At +1: A=0, B=1.
   const pos = (crossfader + 1) / 2; // 0 to 1
@@ -46,6 +48,30 @@ export const VideoBlendViewer: React.FC<VideoBlendViewerProps> = ({
           <span className="text-[10px] font-mono text-amber-400">
             B: {Math.round(opacityB * 100)}%
           </span>
+          <button
+            onClick={() =>
+              setVisualizerMode((prev) =>
+                prev === 'radial-pulse'
+                  ? 'synthwave-3d'
+                  : prev === 'synthwave-3d'
+                  ? 'kaleidoscope'
+                  : prev === 'kaleidoscope'
+                  ? 'spectrum-bars'
+                  : prev === 'spectrum-bars'
+                  ? 'none'
+                  : 'radial-pulse'
+              )
+            }
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-colors ${
+              visualizerMode !== 'none'
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50'
+                : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-white'
+            }`}
+            title="Cycle Audio Visualizer FX"
+          >
+            <Sparkles className="w-3 h-3" />
+            <span>{visualizerMode === 'none' ? 'FX OFF' : visualizerMode.toUpperCase()}</span>
+          </button>
           <button
             onClick={onToggleFullscreen}
             className="p-1 rounded text-neutral-400 hover:text-white bg-neutral-800 border border-neutral-700 transition-colors"
@@ -85,6 +111,25 @@ export const VideoBlendViewer: React.FC<VideoBlendViewerProps> = ({
               className={`w-full h-full object-cover filter contrast-125 saturate-150 ${isPlayingB ? 'animate-pulse' : ''}`}
             />
             <div className="absolute inset-0 bg-amber-950/20 mix-blend-color" />
+          </div>
+        )}
+
+        {/* Awesome Audio Visualizer Overlay */}
+        {visualizerMode !== 'none' && (
+          <div className="absolute inset-0 w-full h-full min-w-full pointer-events-none z-10 overflow-hidden">
+            <AwesomeAudioVisualizer
+              mode={visualizerMode}
+              theme="cyber-dual"
+              opacity={0.8}
+              blendMode="screen"
+              isPlayingA={isPlayingA}
+              isPlayingB={isPlayingB}
+              bpmA={128}
+              bpmB={128}
+              currentTimeA={0}
+              currentTimeB={0}
+              crossfader={crossfader}
+            />
           </div>
         )}
 

@@ -41,6 +41,7 @@ interface DeckProps {
   customTracks?: DeckTrack[];
   showVideo: boolean;
   resetSearchTrigger?: number;
+  onChangeNeuralMix?: (stems: import('../types/dj').NeuralMixStems) => void;
 }
 
 export const Deck: React.FC<DeckProps> = ({
@@ -70,6 +71,7 @@ export const Deck: React.FC<DeckProps> = ({
   onLoadTrack,
   customTracks = [],
   resetSearchTrigger = 0,
+  onChangeNeuralMix,
 }) => {
   const isDeckA = state.id === 'A';
   const accentColor = isDeckA ? 'cyan' : 'orange';
@@ -382,7 +384,7 @@ export const Deck: React.FC<DeckProps> = ({
             accentColor={accentColor}
           />
 
-          {/* 3-Band Equalizer, Filter & Preamp Boost */}
+          {/* 3-Band Equalizer, Filter & Neural Mix AI Stems */}
           <DeckEQ
             eq={state.eq}
             eqKill={state.eqKill}
@@ -393,6 +395,8 @@ export const Deck: React.FC<DeckProps> = ({
             onChangeFilter={onChangeFilter}
             onChangeGain={onChangeGain}
             accentColor={accentColor}
+            neuralMix={state.neuralMix}
+            onChangeNeuralMix={onChangeNeuralMix}
           />
         </div>
 

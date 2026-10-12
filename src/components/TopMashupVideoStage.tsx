@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { DeckTrack } from '../types/dj';
-import { getCurrentLyricLine, TRACK_LYRICS } from '../data/lyrics';
+import { getLiveLyricState, TRACK_LYRICS } from '../data/lyrics';
+import {
+  AwesomeAudioVisualizer,
+  VisualizerMode,
+  VisualizerTheme,
+} from './AwesomeAudioVisualizer';
 import {
   Maximize2,
   Minimize2,
@@ -15,6 +20,11 @@ import {
   Tv,
   ChevronsUp,
   ChevronsDown,
+  Zap,
+  Sliders,
+  Palette,
+  Eye,
+  Flame,
 } from 'lucide-react';
 
 interface TopMashupVideoStageProps {
@@ -38,7 +48,7 @@ interface TopMashupVideoStageProps {
   onPlayPauseB?: () => void;
 }
 
-export type BlendVisualMode = 'screen' | 'alpha' | 'split-wipe' | 'side-by-side';
+export type BlendVisualMode = 'screen' | 'alpha' | 'split-wipe' | 'side-by-side' | 'pip' | 'difference';
 
 export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
   trackA,
@@ -68,6 +78,36 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
   const [enableScanlines, setEnableScanlines] = useState(true);
   // Default to DOUBLED (2X) top stage size with a Minimize button to shrink in
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
+
+  // Awesome Audio Visualizer state (inspired by VolkanSah/Awesome-Audio-Visualizer)
+  const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('radial-pulse');
+  const [visualizerTheme, setVisualizerTheme] = useState<VisualizerTheme>('cyber-dual');
+  const [visualizerBlend, setVisualizerBlend] = useState<'screen' | 'overlay' | 'difference' | 'normal'>('screen');
+  const [visualizerOpacity, setVisualizerOpacity] = useState<number>(0.85);
+  const [visualizerArea, setVisualizerArea] = useState<'cinema' | 'full-stage'>('cinema');
+
+  // Live Video Mixing Effects Suite
+  const [videoFx, setVideoFx] = useState<{
+    glitch: boolean;
+    beatPulse: boolean;
+    cyberpunk: boolean;
+    acidTrip: boolean;
+    vhsTracking: boolean;
+    bloom: boolean;
+    mirror: boolean;
+    strobe: boolean;
+    invert: boolean;
+  }>({
+    glitch: false,
+    beatPulse: false,
+    cyberpunk: false,
+    acidTrip: false,
+    vhsTracking: false,
+    bloom: false,
+    mirror: false,
+    strobe: false,
+    invert: false,
+  });
 
   // Sync displayMode
   useEffect(() => {
@@ -125,8 +165,8 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
   const splitPercentA = Math.max(2, Math.min(98, Math.round((1 - pos) * 100)));
 
   // CC Accapella Lyrics
-  const lyricLineA = trackA ? getCurrentLyricLine(trackA.videoId, currentTimeA) : null;
-  const lyricLineB = trackB ? getCurrentLyricLine(trackB.videoId, currentTimeB) : null;
+  const lyricLineA = trackA ? getLiveLyricState(trackA, currentTimeA).currentLine : null;
+  const lyricLineB = trackB ? getLiveLyricState(trackB, currentTimeB).currentLine : null;
 
   const toggleFullscreen = () => {
     const el = document.getElementById('top-mashup-stage');
@@ -157,8 +197,27 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
       id="top-mashup-stage"
       className="w-full min-w-full shrink-0 bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 animate-bg-aurora border border-neutral-800 rounded-xl px-2.5 py-2 shadow-xl flex flex-col gap-1.5 relative overflow-hidden"
     >
+      {/* Full Top Stage Visualizer Layer (Stretches Edge-to-Edge Across the Entire Top Area) */}
+      {visualizerMode !== 'none' && visualizerArea === 'full-stage' && (
+        <div className="absolute inset-0 w-full h-full min-w-full pointer-events-none z-0 overflow-hidden">
+          <AwesomeAudioVisualizer
+            mode={visualizerMode}
+            theme={visualizerTheme}
+            opacity={visualizerOpacity * 0.7}
+            blendMode={visualizerBlend}
+            isPlayingA={isPlayingA}
+            isPlayingB={isPlayingB}
+            bpmA={bpmA}
+            bpmB={bpmB}
+            currentTimeA={currentTimeA}
+            currentTimeB={currentTimeB}
+            crossfader={crossfader}
+          />
+        </div>
+      )}
+
       {/* Top Bar: Blend Mode Selector, CC Accapella Toggle, Minimize (Shrink In) & Fullscreen */}
-      <div className="w-full flex flex-wrap items-center justify-between border-b border-neutral-800 pb-1.5 gap-2">
+      <div className="w-full flex flex-wrap items-center justify-between border-b border-neutral-800 pb-1.5 gap-2 relative z-10">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-[11px] font-mono font-bold text-white shadow-sm">
             <span
@@ -234,6 +293,32 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
             >
               <Split className="w-3 h-3" />
               <span>Side-by-Side</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectBlendMode('pip')}
+              className={`px-2 py-0.5 rounded transition-colors flex items-center gap-1 ${
+                blendMode === 'pip'
+                  ? 'bg-amber-500 text-black font-black shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Picture-in-Picture: Deck B floating video monitor over Deck A"
+            >
+              <Tv className="w-3 h-3" />
+              <span>PiP Cam</span>
+            </button>
+
+            <button
+              onClick={() => handleSelectBlendMode('difference')}
+              className={`px-2 py-0.5 rounded transition-colors flex items-center gap-1 ${
+                blendMode === 'difference'
+                  ? 'bg-rose-500 text-black font-black shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Difference Video Synth: High contrast chromatic psychedelic inversion"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Synth Invert</span>
             </button>
           </div>
 
@@ -311,6 +396,263 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
         </div>
       </div>
 
+      {/* VJ Visualizer Engine & Video Post-FX Rack (Inspired by VolkanSah/Awesome-Audio-Visualizer) */}
+      <div className="flex flex-col gap-1.5 px-3 py-2 bg-neutral-950/95 border-b border-neutral-800 text-[10px] font-mono select-none">
+        {/* Tier 1: Awesome Audio Visualizer Engine Controls */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1 shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span>AUDIO VISUALIZER:</span>
+            </span>
+
+            {(
+              [
+                { id: 'none', label: 'OFF' },
+                { id: 'radial-pulse', label: 'RADIAL PULSE' },
+                { id: 'synthwave-3d', label: 'SYNTHWAVE 3D' },
+                { id: 'kaleidoscope', label: 'KALEIDOSCOPE' },
+                { id: 'spectrum-bars', label: 'SPECTRUM BARS' },
+                { id: 'cyber-matrix', label: 'CYBER MATRIX' },
+                { id: 'starfield-warp', label: 'STARFIELD WARP' },
+                { id: 'laser-osc', label: 'LASER OSC' },
+                { id: 'plasma-ripple', label: 'PLASMA RIPPLE' },
+              ] as const
+            ).map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setVisualizerMode(m.id)}
+                className={`px-2 py-0.5 rounded border transition-all active:scale-95 ${
+                  visualizerMode === m.id
+                    ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-sm'
+                    : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+                }`}
+                title={`Select ${m.label} Audio-Reactive Visualizer`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Visualizer Fine-Tuning Controls */}
+          {visualizerMode !== 'none' && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Color Theme */}
+              <div className="flex items-center gap-1 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
+                <Palette className="w-3 h-3 text-cyan-400" />
+                <span className="text-neutral-500 text-[9px]">COLOR:</span>
+                <select
+                  value={visualizerTheme}
+                  onChange={(e) => setVisualizerTheme(e.target.value as VisualizerTheme)}
+                  className="bg-transparent text-white text-[10px] focus:outline-none cursor-pointer"
+                >
+                  <option value="cyber-dual" className="bg-neutral-900 text-cyan-400">Cyber Dual (Deck A/B)</option>
+                  <option value="neon-sunset" className="bg-neutral-900 text-pink-400">Neon Sunset</option>
+                  <option value="matrix-green" className="bg-neutral-900 text-emerald-400">Matrix Green</option>
+                  <option value="solar-gold" className="bg-neutral-900 text-amber-400">Solar Gold</option>
+                  <option value="ice-blue" className="bg-neutral-900 text-sky-400">Ice Blue</option>
+                </select>
+              </div>
+
+              {/* Blend Mode */}
+              <div className="flex items-center gap-1 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
+                <Layers className="w-3 h-3 text-cyan-400" />
+                <span className="text-neutral-500 text-[9px]">BLEND:</span>
+                <select
+                  value={visualizerBlend}
+                  onChange={(e) => setVisualizerBlend(e.target.value as any)}
+                  className="bg-transparent text-white text-[10px] focus:outline-none cursor-pointer"
+                >
+                  <option value="screen" className="bg-neutral-900">Screen Glow</option>
+                  <option value="overlay" className="bg-neutral-900">Overlay VJ</option>
+                  <option value="difference" className="bg-neutral-900">Difference</option>
+                  <option value="normal" className="bg-neutral-900">Solo Synth (Full Visual)</option>
+                </select>
+              </div>
+
+              {/* Area Stretch Selector */}
+              <div className="flex items-center gap-1 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
+                <Maximize2 className="w-3 h-3 text-cyan-400" />
+                <span className="text-neutral-500 text-[9px]">AREA:</span>
+                <select
+                  value={visualizerArea}
+                  onChange={(e) => setVisualizerArea(e.target.value as any)}
+                  className="bg-transparent text-white text-[10px] focus:outline-none cursor-pointer font-bold"
+                >
+                  <option value="cinema" className="bg-neutral-900">100% Cinema Screen</option>
+                  <option value="full-stage" className="bg-neutral-900">Full Top Stage (Whole Area)</option>
+                </select>
+              </div>
+
+              {/* Opacity Slider */}
+              <div className="flex items-center gap-1 bg-neutral-900 px-2 py-0.5 rounded border border-neutral-800">
+                <Eye className="w-3 h-3 text-cyan-400" />
+                <span className="text-neutral-500 text-[9px]">OPACITY:</span>
+                <input
+                  type="range"
+                  min={0.2}
+                  max={1}
+                  step={0.05}
+                  value={visualizerOpacity}
+                  onChange={(e) => setVisualizerOpacity(parseFloat(e.target.value))}
+                  className="w-16 h-1.5 accent-cyan-400 cursor-pointer bg-neutral-800 rounded"
+                />
+                <span className="text-cyan-400 text-[9px] w-6 text-right font-bold">
+                  {Math.round(visualizerOpacity * 100)}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tier 2: Live Video Post-FX Controls */}
+        <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-neutral-900">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1 shrink-0">
+              <Zap className="w-3.5 h-3.5 text-purple-400" />
+              <span>VIDEO POST FX:</span>
+            </span>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, glitch: !p.glitch }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.glitch
+                  ? 'bg-red-500 text-black border-red-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Chromatic RGB split and digital glitch displacement"
+            >
+              RGB GLITCH
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, beatPulse: !p.beatPulse }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.beatPulse
+                  ? 'bg-cyan-500 text-black border-cyan-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Audio-reactive scale zoom pulse synchronized to track BPM"
+            >
+              BEAT PULSE
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, cyberpunk: !p.cyberpunk }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.cyberpunk
+                  ? 'bg-fuchsia-500 text-black border-fuchsia-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Saturated cyberpunk neon color grade"
+            >
+              CYBERPUNK
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, acidTrip: !p.acidTrip }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.acidTrip
+                  ? 'bg-violet-500 text-black border-violet-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Acid psychedelic color spectrum cycling"
+            >
+              ACID TRIP
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, vhsTracking: !p.vhsTracking }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.vhsTracking
+                  ? 'bg-emerald-500 text-black border-emerald-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Analog VHS tape tracking distortion"
+            >
+              VHS TAPE
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, bloom: !p.bloom }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.bloom
+                  ? 'bg-sky-400 text-black border-sky-300 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="High-luma concert lens bloom"
+            >
+              BLOOM
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, mirror: !p.mirror }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.mirror
+                  ? 'bg-amber-500 text-black border-amber-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Horizontal mirror reflection"
+            >
+              MIRROR H
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, strobe: !p.strobe }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.strobe
+                  ? 'bg-yellow-400 text-black border-yellow-300 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Rave strobe flash overlay on beat drop"
+            >
+              STROBE
+            </button>
+
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, invert: !p.invert }))}
+              className={`px-2 py-0.5 rounded border transition-all ${
+                videoFx.invert
+                  ? 'bg-emerald-500 text-black border-emerald-400 font-black shadow-sm'
+                  : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white'
+              }`}
+              title="Invert negative video color spectrum"
+            >
+              INVERT
+            </button>
+          </div>
+
+          {(videoFx.glitch ||
+            videoFx.beatPulse ||
+            videoFx.cyberpunk ||
+            videoFx.acidTrip ||
+            videoFx.vhsTracking ||
+            videoFx.bloom ||
+            videoFx.mirror ||
+            videoFx.strobe ||
+            videoFx.invert) && (
+            <button
+              onClick={() =>
+                setVideoFx({
+                  glitch: false,
+                  beatPulse: false,
+                  cyberpunk: false,
+                  acidTrip: false,
+                  vhsTracking: false,
+                  bloom: false,
+                  mirror: false,
+                  strobe: false,
+                  invert: false,
+                })
+              }
+              className="px-2 py-0.5 rounded bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white text-[9px] font-bold border border-neutral-700"
+            >
+              RESET ALL FX
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* ONE UNIFIED WIDESCREEN CINEMA STAGE WITH TWO VIDEOS BLENDED FULL & FIXED 100% WIDTH */}
       <div
         className={`w-full min-w-full relative rounded-lg overflow-hidden bg-black border border-neutral-800 shadow-inner select-none transition-[height] duration-300 ease-in-out ${
@@ -319,9 +661,22 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
             : isMinimized
             ? 'h-[195px] sm:h-[225px] lg:h-[255px]'
             : 'h-[390px] sm:h-[450px] lg:h-[510px]'
-        }`}
-        style={{ isolation: 'isolate' }}
+        } ${videoFx.glitch ? 'fx-glitch' : ''} ${videoFx.beatPulse ? 'fx-pulse' : ''} ${
+          videoFx.cyberpunk ? 'fx-cyberpunk' : ''
+        } ${videoFx.acidTrip ? 'fx-acid-trip' : ''} ${videoFx.vhsTracking ? 'fx-vhs-tracking' : ''} ${
+          videoFx.bloom ? 'fx-bloom' : ''
+        } ${videoFx.mirror ? 'fx-mirror-h' : ''} ${videoFx.invert ? 'fx-invert' : ''}`}
+        style={
+          {
+            isolation: 'isolate',
+            '--beat-pulse-speed': `${(60 / Math.max(60, isPlayingB ? bpmB : bpmA)).toFixed(2)}s`,
+          } as React.CSSProperties
+        }
       >
+        {/* Realtime Strobe Flash Overlay */}
+        {videoFx.strobe && (
+          <div className="absolute inset-0 pointer-events-none z-40 bg-white fx-strobe-flash mix-blend-screen" />
+        )}
         {/* Animated Cyber-Stage Background Layer Behind Both Videos */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-r from-cyan-950/40 via-purple-950/35 to-amber-950/40 animate-bg-aurora">
           <div className="absolute -inset-12 animate-bg-grid opacity-45" />
@@ -429,20 +784,27 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
 
           {/* DECK B VIDEO CONTAINER (LOCKED 100% WIDTH & 16:9 COVER SUPERIMPOSED WITH SCREEN EFFECT) */}
           <div
-            className={`yt-stage-container overflow-hidden rounded-lg ${
+            className={`yt-stage-container overflow-hidden rounded-lg transition-all ${
               blendMode === 'side-by-side'
                 ? 'w-full h-full relative border border-amber-500/40 bg-black'
+                : blendMode === 'pip'
+                ? 'absolute bottom-3 right-3 w-48 sm:w-64 aspect-video z-30 border-2 border-amber-400/90 rounded-xl shadow-2xl bg-black ring-2 ring-black/80'
                 : 'absolute inset-0 w-full h-full z-10'
             }`}
             style={{
-              opacity: isStackedMashup ? opacityB : 1,
-              mixBlendMode: blendMode === 'screen' ? 'screen' : 'normal',
+              opacity: blendMode === 'pip' ? 1 : isStackedMashup ? opacityB : 1,
+              mixBlendMode:
+                blendMode === 'screen'
+                  ? 'screen'
+                  : blendMode === 'difference'
+                  ? 'difference'
+                  : 'normal',
               clipPath:
                 blendMode === 'split-wipe'
                   ? `polygon(${splitPercentA}% 0, 100% 0, 100% 100%, ${splitPercentA}% 100%)`
                   : undefined,
               pointerEvents:
-                blendMode === 'side-by-side'
+                blendMode === 'side-by-side' || blendMode === 'pip'
                   ? 'auto'
                   : isStackedMashup && pos > 0.5
                   ? 'auto'
@@ -553,6 +915,30 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
           )}
         </div>
 
+        {/* AWESOME AUDIO VISUALIZER LAYER (100% Widescreen Cinema Stage Stretch) */}
+        {visualizerMode !== 'none' && visualizerArea === 'cinema' && displayMode !== 'audio-only' && (
+          <div
+            className={`absolute inset-0 w-full h-full min-w-full pointer-events-none z-[18] overflow-hidden ${
+              visualizerBlend === 'normal' ? 'bg-black' : ''
+            }`}
+            style={{ width: '100%', height: '100%', left: 0, top: 0, right: 0, bottom: 0 }}
+          >
+            <AwesomeAudioVisualizer
+              mode={visualizerMode}
+              theme={visualizerTheme}
+              opacity={visualizerOpacity}
+              blendMode={visualizerBlend}
+              isPlayingA={isPlayingA}
+              isPlayingB={isPlayingB}
+              bpmA={bpmA}
+              bpmB={bpmB}
+              currentTimeA={currentTimeA}
+              currentTimeB={currentTimeB}
+              crossfader={crossfader}
+            />
+          </div>
+        )}
+
         {/* CRT Scanline & Concert Atmosphere Overlay */}
         {enableScanlines && displayMode !== 'audio-only' && (
           <div className="absolute inset-0 pointer-events-none z-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] opacity-35 mix-blend-overlay" />
@@ -560,12 +946,20 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
 
         {/* Live Mashup HUD Watermark + Quick Floating Minimize/Expand Toggle */}
         {displayMode !== 'audio-only' && (
-          <div className="absolute top-2 inset-x-0 z-30 flex items-center justify-center gap-2 pointer-events-none">
+          <div className="absolute top-2 inset-x-0 z-30 flex items-center justify-center gap-2 pointer-events-none flex-wrap px-4">
             {blendMode === 'screen' && (
               <div className="bg-black/80 px-3 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-2 shadow-xl">
                 <span className="w-2 h-2 rounded-full bg-amber-400" />
                 <span className="text-[10px] font-mono font-black text-amber-300 tracking-wider">
                   SCREEN MASHUP · {weightA}% A / {weightB}% B
+                </span>
+              </div>
+            )}
+            {visualizerMode !== 'none' && (
+              <div className="bg-black/85 px-3 py-0.5 rounded-full border border-cyan-500/50 flex items-center gap-1.5 shadow-xl">
+                <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
+                <span className="text-[10px] font-mono font-black text-cyan-300 tracking-wider uppercase">
+                  VJ {visualizerMode.replace('-', ' ')}
                 </span>
               </div>
             )}

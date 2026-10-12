@@ -13,20 +13,29 @@ export const SlidingTitle: React.FC<SlidingTitleProps> = ({
   className = 'text-xs font-bold text-white',
   accentClassName = 'text-neutral-400 text-[10px]',
 }) => {
-  const isLong = title.length > 24;
-
   return (
-    <div className="w-full overflow-hidden relative group/title">
-      <div
-        className={`whitespace-nowrap ${isLong ? 'animate-marquee-slide' : ''}`}
-        style={isLong ? ({ '--slide-dist': `-${Math.min(75, Math.max(25, (title.length - 20) * 3))}%` } as React.CSSProperties) : undefined}
-      >
-        <span className={className}>{title}</span>
-        {artist && (
-          <span className={`ml-1.5 ${accentClassName}`}>
-            · {artist}
-          </span>
-        )}
+    <div className="w-full overflow-hidden relative group/title select-none">
+      {/* Edge gradient masks for hardware display bezel aesthetic */}
+      <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-neutral-950/90 to-transparent z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-neutral-950/90 to-transparent z-10 pointer-events-none" />
+
+      {/* Continuously scrolling DJ CDJ / VFD LED Ticker */}
+      <div className="flex whitespace-nowrap overflow-hidden">
+        <div className="inline-flex items-center animate-deck-ticker shrink-0 pr-8">
+          <span className={className}>{title}</span>
+          {artist && (
+            <span className={`ml-2 ${accentClassName}`}>
+              · {artist}
+            </span>
+          )}
+          <span className="mx-4 text-cyan-400/40 text-[10px] font-mono">✦</span>
+          <span className={className}>{title}</span>
+          {artist && (
+            <span className={`ml-2 ${accentClassName}`}>
+              · {artist}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -29,6 +29,7 @@ interface MasterMixerProps {
   onRandomMashup?: () => void;
   onSwapRandomMashupDecks?: () => void;
   activeRandomMashup?: RandomMashupPairing | null;
+  onOpenMixxxFx?: () => void;
 }
 
 export const MasterMixer: React.FC<MasterMixerProps> = ({
@@ -58,6 +59,7 @@ export const MasterMixer: React.FC<MasterMixerProps> = ({
   onRandomMashup,
   onSwapRandomMashupDecks,
   activeRandomMashup,
+  onOpenMixxxFx,
 }) => {
   // Animated simulated peak levels for VU meters
   const [levelA, setLevelA] = useState(0);
@@ -156,8 +158,19 @@ export const MasterMixer: React.FC<MasterMixerProps> = ({
             className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-emerald-500 hover:bg-emerald-400 text-black transition-all active:scale-95 shadow-sm"
             title="Boost both Deck A & Deck B to Maximum +12dB Overdrive"
           >
-            MAX BOOST A+B
+            MAX BOOST
           </button>
+
+          {/* Little Mixxx DSP Effects Button Next to Master Mixer */}
+          {onOpenMixxxFx && (
+            <button
+              onClick={onOpenMixxxFx}
+              className="px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase bg-purple-500 hover:bg-purple-400 text-black transition-all active:scale-95 shadow-sm"
+              title="Open Mixxx Built-in Multi-Effects Suite"
+            >
+              MIXXX FX
+            </button>
+          )}
         </div>
       </div>
 

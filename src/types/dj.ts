@@ -37,6 +37,39 @@ export interface RandomMashupPairing {
   beatsMatchReason: string;
 }
 
+export interface NeuralMixStems {
+  vocals: number; // 0 to 100
+  drums: number; // 0 to 100
+  instruments: number; // 0 to 100
+  vocalMute: boolean;
+  drumMute: boolean;
+  instrumentMute: boolean;
+  soloStem: 'vocals' | 'drums' | 'instruments' | null;
+}
+
+export type MixxxFxType =
+  | 'filter'
+  | 'flanger'
+  | 'echo'
+  | 'reverb'
+  | 'bitcrusher'
+  | 'phaser'
+  | 'autopan'
+  | 'distortion';
+
+export interface MixxxEffectUnit {
+  id: string;
+  name: string;
+  assignedTo: 'A' | 'B' | 'Master';
+  enabled: boolean;
+  fxType: MixxxFxType;
+  dryWet: number; // 0 to 100
+  superKnob: number; // 0 to 100
+  param1: number; // 0 to 100
+  param2: number; // 0 to 100
+  param3: number; // 0 to 100
+}
+
 export interface DeckState {
   id: 'A' | 'B';
   track: DeckTrack | null;
@@ -70,6 +103,7 @@ export interface DeckState {
   pfl: boolean; // Headphone cue
   isScratching: boolean;
   vinylAngle: number;
+  neuralMix?: NeuralMixStems;
 }
 
 export type CrossfaderCurve = 'smooth' | 'linear' | 'cut';
