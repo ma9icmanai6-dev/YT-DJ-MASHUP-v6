@@ -1181,29 +1181,34 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans select-none antialiased">
+    <div className="min-h-screen w-full bg-gradient-to-br from-neutral-950 via-slate-950 to-neutral-950 animate-bg-aurora text-neutral-100 flex flex-col font-sans select-none antialiased relative overflow-x-hidden">
+      {/* Animated Full-Screen Ambient DJ Grid Background */}
+      <div className="fixed -inset-12 z-0 pointer-events-none animate-bg-grid opacity-30" />
+
       {/* Top Header */}
-      <Header
-        displayMode={displayMode}
-        onChangeDisplayMode={setDisplayMode}
-        keyA={deckA.track?.key}
-        keyB={deckB.track?.key}
-        isRecording={isRecording}
-        onOpenCrateModal={() => setIsCrateModalOpen(true)}
-        onOpenRecordingModal={() => setIsRecordingModalOpen(true)}
-        onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
-        onOpenMidiModal={() => setIsMidiModalOpen(true)}
-        connectedControllersCount={controllerDevices.length}
-        isMuted={isMuted}
-        onToggleMute={() => {
-          setIsMuted(!isMuted);
-          audioFx.setMute(!isMuted);
-        }}
-        onRandomMashup={() => handleRandomMashup()}
-      />
+      <div className="relative z-10 w-full">
+        <Header
+          displayMode={displayMode}
+          onChangeDisplayMode={setDisplayMode}
+          keyA={deckA.track?.key}
+          keyB={deckB.track?.key}
+          isRecording={isRecording}
+          onOpenCrateModal={() => setIsCrateModalOpen(true)}
+          onOpenRecordingModal={() => setIsRecordingModalOpen(true)}
+          onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
+          onOpenMidiModal={() => setIsMidiModalOpen(true)}
+          connectedControllersCount={controllerDevices.length}
+          isMuted={isMuted}
+          onToggleMute={() => {
+            setIsMuted(!isMuted);
+            audioFx.setMute(!isMuted);
+          }}
+          onRandomMashup={() => handleRandomMashup()}
+        />
+      </div>
 
       {/* Main Console Layout */}
-      <main className="flex-1 max-w-[1720px] w-full mx-auto px-2 sm:px-3 py-1.5 flex flex-col gap-2">
+      <main className="relative z-10 flex-1 max-w-[1720px] w-full min-w-0 mx-auto px-2 sm:px-3 py-1.5 flex flex-col gap-2">
         {/* Top Mashup Video Stage: Dual YouTube videos mashed up at the top with Screen blend and CC for Accapella */}
         <TopMashupVideoStage
           trackA={deckA.track}

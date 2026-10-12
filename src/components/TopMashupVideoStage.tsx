@@ -3,6 +3,7 @@ import { DeckTrack } from '../types/dj';
 import { getCurrentLyricLine, TRACK_LYRICS } from '../data/lyrics';
 import {
   Maximize2,
+  Minimize2,
   Sparkles,
   Subtitles,
   Split,
@@ -11,8 +12,9 @@ import {
   Columns,
   Play,
   Pause,
-  Film,
   Tv,
+  ChevronsUp,
+  ChevronsDown,
 } from 'lucide-react';
 
 interface TopMashupVideoStageProps {
@@ -64,6 +66,8 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
   const [isLyricsModalOpen, setIsLyricsModalOpen] = useState(false);
   const [customLyricInput, setCustomLyricInput] = useState('');
   const [enableScanlines, setEnableScanlines] = useState(true);
+  // Default to DOUBLED (2X) top stage size with a Minimize button to shrink in
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
   // Sync displayMode
   useEffect(() => {
@@ -151,10 +155,10 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
   return (
     <section
       id="top-mashup-stage"
-      className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-2.5 py-2 shadow-xl flex flex-col gap-1.5 relative overflow-hidden"
+      className="w-full min-w-full shrink-0 bg-gradient-to-r from-neutral-900 via-neutral-950 to-neutral-900 animate-bg-aurora border border-neutral-800 rounded-xl px-2.5 py-2 shadow-xl flex flex-col gap-1.5 relative overflow-hidden"
     >
-      {/* Top Bar: Blend Mode Selector, CC Accapella Toggle & Fullscreen */}
-      <div className="flex flex-wrap items-center justify-between border-b border-neutral-800 pb-1.5 gap-2">
+      {/* Top Bar: Blend Mode Selector, CC Accapella Toggle, Minimize (Shrink In) & Fullscreen */}
+      <div className="w-full flex flex-wrap items-center justify-between border-b border-neutral-800 pb-1.5 gap-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-neutral-950 border border-neutral-800 text-[11px] font-mono font-bold text-white shadow-sm">
             <span
@@ -162,12 +166,12 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                 isPlayingA || isPlayingB ? 'bg-red-500 animate-ping' : 'bg-emerald-500'
               }`}
             />
-            <span>MASHUP VIDEO SCREEN</span>
+            <span>MASHUP VIDEO SCREEN ({isMinimized ? '1X COMPACT' : '2X DOUBLE SIZE'})</span>
           </div>
 
-          <span className="hidden md:inline text-[11px] font-mono text-neutral-400">
+          <span className="hidden xl:inline text-[11px] font-mono text-neutral-400">
             {blendMode === 'screen'
-              ? '✨ Screen Mashup Active: Dual Videos Blended (Deck A + Deck B)'
+              ? '✨ Screen Mashup Active: Dual Videos Blended Full-Width (Deck A + Deck B)'
               : blendMode === 'alpha'
               ? '🌓 Alpha Cross-Dissolve: Continuous Opacity Blend'
               : blendMode === 'split-wipe'
@@ -269,6 +273,33 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
             <Edit3 className="w-3.5 h-3.5" />
           </button>
 
+          {/* MINIMIZE / EXPAND 2X BUTTON TO SHRINK IN OR DOUBLE TOP STAGE */}
+          <button
+            onClick={() => setIsMinimized((prev) => !prev)}
+            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-black border transition-all active:scale-95 shadow-sm ${
+              isMinimized
+                ? 'bg-cyan-500 hover:bg-cyan-400 text-black border-cyan-300'
+                : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/60'
+            }`}
+            title={
+              isMinimized
+                ? 'Expand Top Video Stage to Double Size (2X)'
+                : 'Minimize / Shrink In Top Video Stage'
+            }
+          >
+            {isMinimized ? (
+              <>
+                <ChevronsDown className="w-3.5 h-3.5" />
+                <span>EXPAND 2X</span>
+              </>
+            ) : (
+              <>
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>MINIMIZE</span>
+              </>
+            )}
+          </button>
+
           {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
@@ -280,27 +311,34 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
         </div>
       </div>
 
-      {/* ONE UNIFIED WIDESCREEN CINEMA STAGE WITH TWO VIDEOS BLENDED FULL */}
+      {/* ONE UNIFIED WIDESCREEN CINEMA STAGE WITH TWO VIDEOS BLENDED FULL & FIXED 100% WIDTH */}
       <div
-        className={`w-full relative rounded-lg overflow-hidden bg-black border border-neutral-800 shadow-inner flex items-center justify-center select-none ${
+        className={`w-full min-w-full relative rounded-lg overflow-hidden bg-black border border-neutral-800 shadow-inner select-none transition-[height] duration-300 ease-in-out ${
           displayMode === 'audio-only'
             ? 'h-14'
-            : 'h-[195px] sm:h-[225px] lg:h-[255px] w-full'
+            : isMinimized
+            ? 'h-[195px] sm:h-[225px] lg:h-[255px]'
+            : 'h-[390px] sm:h-[450px] lg:h-[510px]'
         }`}
         style={{ isolation: 'isolate' }}
       >
-        {/* Real YouTube Players Layer (Always mounted so audio continues in all modes) */}
+        {/* Animated Cyber-Stage Background Layer Behind Both Videos */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-r from-cyan-950/40 via-purple-950/35 to-amber-950/40 animate-bg-aurora">
+          <div className="absolute -inset-12 animate-bg-grid opacity-45" />
+        </div>
+
+        {/* Real YouTube Players Layer (Always mounted and locked to 100% full width) */}
         <div
-          className={`w-full h-full relative ${
+          className={`w-full min-w-full h-full relative z-[1] ${
             blendMode === 'side-by-side'
-              ? 'grid grid-cols-1 md:grid-cols-2 gap-1.5 p-1 bg-black'
-              : 'relative'
+              ? 'grid grid-cols-1 md:grid-cols-2 gap-1.5 p-1 bg-black/80'
+              : 'block'
           } ${displayMode === 'audio-only' ? 'opacity-20 pointer-events-none' : ''}`}
           style={{ isolation: 'isolate' }}
         >
-          {/* DECK A VIDEO CONTAINER (FULL 100% WIDTH & HEIGHT IN MASHUP MODES) */}
+          {/* DECK A VIDEO CONTAINER (LOCKED 100% WIDTH & 16:9 COVER SO IT NEVER SHRINKS WIDTH ON LOAD) */}
           <div
-            className={`overflow-hidden rounded-lg ${
+            className={`yt-stage-container overflow-hidden rounded-lg ${
               blendMode === 'side-by-side'
                 ? 'w-full h-full relative border border-cyan-500/40 bg-black'
                 : 'absolute inset-0 w-full h-full z-0 bg-black'
@@ -320,12 +358,12 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   : 'none',
             }}
           >
-            {/* Visual Backdrop Poster if video is loading, stopped, or audio-only Archive track */}
+            {/* Visual Backdrop Poster (Animated Ken-Burns) if video is loading, stopped, or audio-only Archive track */}
             <div
               className={`absolute inset-0 z-0 pointer-events-none overflow-hidden ${
                 trackA?.thumbnailUrl && (embedErrorA || trackA.mediaType === 'audio')
                   ? 'opacity-100'
-                  : 'opacity-0'
+                  : 'opacity-40'
               }`}
             >
               {trackA?.thumbnailUrl && (
@@ -333,19 +371,15 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   src={trackA.thumbnailUrl}
                   alt={trackA.title}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover scale-105 filter contrast-125 saturate-150"
+                  className="w-full h-full object-cover animate-bg-kenburns"
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-cyan-950/20 to-black/50" />
             </div>
 
-            {/* Dedicated Isolated Wrapper for YouTube Player Deck A (scaled full-bleed in widescreen mashup modes so there are zero black side-bars) */}
+            {/* Dedicated 16:9 Cover Wrapper for YouTube Player Deck A (stays exact same 100% full width on load and play) */}
             <div
-              className={`${
-                blendMode === 'side-by-side'
-                  ? 'w-full h-full relative'
-                  : 'w-full h-[180%] -top-[40%] relative'
-              } z-[1] ${
+              className={`yt-cover-frame z-[1] ${
                 embedErrorA || trackA?.source === 'archive' ? 'opacity-0 pointer-events-none' : 'opacity-100'
               }`}
             >
@@ -393,9 +427,9 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
             </div>
           </div>
 
-          {/* DECK B VIDEO CONTAINER (FULL 100% WIDTH & HEIGHT SUPERIMPOSED DIRECTLY WITH SCREEN EFFECT) */}
+          {/* DECK B VIDEO CONTAINER (LOCKED 100% WIDTH & 16:9 COVER SUPERIMPOSED WITH SCREEN EFFECT) */}
           <div
-            className={`overflow-hidden rounded-lg ${
+            className={`yt-stage-container overflow-hidden rounded-lg ${
               blendMode === 'side-by-side'
                 ? 'w-full h-full relative border border-amber-500/40 bg-black'
                 : 'absolute inset-0 w-full h-full z-10'
@@ -415,12 +449,12 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   : 'none',
             }}
           >
-            {/* Visual Backdrop Poster if video is loading, stopped, or audio-only Archive track */}
+            {/* Visual Backdrop Poster (Animated Ken-Burns) if video is loading, stopped, or audio-only Archive track */}
             <div
               className={`absolute inset-0 z-0 pointer-events-none overflow-hidden ${
                 trackB?.thumbnailUrl && (embedErrorB || trackB.mediaType === 'audio')
                   ? 'opacity-100'
-                  : 'opacity-0'
+                  : 'opacity-40'
               }`}
             >
               {trackB?.thumbnailUrl && (
@@ -428,19 +462,15 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   src={trackB.thumbnailUrl}
                   alt={trackB.title}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover scale-105 filter contrast-125 saturate-150"
+                  className="w-full h-full object-cover animate-bg-kenburns"
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-amber-950/20 to-black/50" />
             </div>
 
-            {/* Dedicated Isolated Wrapper for YouTube Player Deck B (scaled full-bleed in widescreen mashup modes) */}
+            {/* Dedicated 16:9 Cover Wrapper for YouTube Player Deck B (stays exact same 100% full width on load and play) */}
             <div
-              className={`${
-                blendMode === 'side-by-side'
-                  ? 'w-full h-full relative'
-                  : 'w-full h-[180%] -top-[40%] relative'
-              } z-[1] ${
+              className={`yt-cover-frame z-[1] ${
                 embedErrorB || trackB?.source === 'archive' ? 'opacity-0 pointer-events-none' : 'opacity-100'
               }`}
             >
@@ -494,7 +524,7 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   src={trackA.thumbnailUrl}
                   alt=""
                   referrerPolicy="no-referrer"
-                  className="absolute inset-0 w-full h-full object-cover scale-105 filter contrast-125 saturate-150"
+                  className="absolute inset-0 w-full h-full object-cover animate-bg-kenburns"
                   style={{ opacity: screenGlowA, mixBlendMode: 'screen' }}
                 />
               )}
@@ -503,12 +533,12 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   src={trackB.thumbnailUrl}
                   alt=""
                   referrerPolicy="no-referrer"
-                  className="absolute inset-0 w-full h-full object-cover scale-105 filter contrast-125 saturate-150"
+                  className="absolute inset-0 w-full h-full object-cover animate-bg-kenburns"
                   style={{ opacity: screenGlowB, mixBlendMode: 'screen' }}
                 />
               )}
               <div
-                className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-fuchsia-500/15 to-amber-500/20"
+                className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-fuchsia-500/15 to-amber-500/20 animate-bg-aurora"
                 style={{ mixBlendMode: 'screen' }}
               />
             </div>
@@ -528,15 +558,34 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
           <div className="absolute inset-0 pointer-events-none z-20 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] opacity-35 mix-blend-overlay" />
         )}
 
-        {/* Live Mashup HUD Watermark */}
-        {blendMode === 'screen' && displayMode !== 'audio-only' && (
-          <div className="absolute top-2 inset-x-0 z-30 flex justify-center pointer-events-none">
-            <div className="bg-black/80 px-3 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-2 shadow-xl">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-[10px] font-mono font-black text-amber-300 tracking-wider">
-                SCREEN MASHUP · {weightA}% A / {weightB}% B
-              </span>
-            </div>
+        {/* Live Mashup HUD Watermark + Quick Floating Minimize/Expand Toggle */}
+        {displayMode !== 'audio-only' && (
+          <div className="absolute top-2 inset-x-0 z-30 flex items-center justify-center gap-2 pointer-events-none">
+            {blendMode === 'screen' && (
+              <div className="bg-black/80 px-3 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-2 shadow-xl">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span className="text-[10px] font-mono font-black text-amber-300 tracking-wider">
+                  SCREEN MASHUP · {weightA}% A / {weightB}% B
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => setIsMinimized((prev) => !prev)}
+              className="pointer-events-auto bg-black/85 hover:bg-neutral-900 px-2.5 py-0.5 rounded-full border border-neutral-700 hover:border-amber-400 text-[10px] font-mono font-black text-white flex items-center gap-1 shadow-xl transition-colors"
+              title={isMinimized ? 'Expand Top Stage (2X Height)' : 'Minimize / Shrink In Top Stage'}
+            >
+              {isMinimized ? (
+                <>
+                  <ChevronsDown className="w-3 h-3 text-cyan-400" />
+                  <span>EXPAND 2X</span>
+                </>
+              ) : (
+                <>
+                  <ChevronsUp className="w-3 h-3 text-amber-400" />
+                  <span>MINIMIZE</span>
+                </>
+              )}
+            </button>
           </div>
         )}
 

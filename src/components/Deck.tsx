@@ -155,30 +155,41 @@ export const Deck: React.FC<DeckProps> = ({
   }, [state.pitch, isArchiveTrack]);
 
   return (
-    <div className={`flex-1 flex flex-col bg-neutral-950 rounded-2xl border-2 ${accentBorder} p-2.5 sm:p-3 shadow-2xl gap-2.5 relative group`}>
+    <div className={`flex-1 min-w-0 flex flex-col bg-neutral-950 rounded-2xl border-2 ${accentBorder} p-2.5 sm:p-3 shadow-2xl gap-2.5 relative group`}>
       {/* BOTTOM LAYER FULL-DECK LIVE VIDEO BACKGROUND: Plays under the entire deck on both sides without flashing */}
       <div
-        className="absolute inset-0 z-0 rounded-2xl overflow-hidden pointer-events-none select-none bg-black"
+        className="yt-stage-container absolute inset-0 z-0 rounded-2xl overflow-hidden pointer-events-none select-none bg-black"
         style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
       >
-        {/* Static Artwork Base Fallback (no opacity transition or filter thrashing) */}
+        {/* Animated Aurora & Grid Base Layer */}
+        <div
+          className={`absolute inset-0 z-0 pointer-events-none animate-bg-aurora ${
+            isDeckA
+              ? 'bg-gradient-to-br from-cyan-950/60 via-neutral-950 to-purple-950/50'
+              : 'bg-gradient-to-br from-amber-950/60 via-neutral-950 to-rose-950/50'
+          }`}
+        >
+          <div className="absolute -inset-12 animate-bg-grid opacity-50" />
+        </div>
+
+        {/* Animated Ken-Burns Artwork Base Fallback */}
         {state.track?.thumbnailUrl && (
           <img
             src={state.track.thumbnailUrl}
             alt=""
             referrerPolicy="no-referrer"
-            className="absolute inset-0 z-0 w-full h-full object-cover scale-105 opacity-35 pointer-events-none"
+            className="absolute inset-0 z-0 w-full h-full object-cover opacity-40 pointer-events-none animate-bg-kenburns"
           />
         )}
 
-        {/* Persistent Live YouTube Video Playing on Bottom Layer Under Deck */}
+        {/* Persistent Live YouTube Video Playing on Bottom Layer Under Deck (16:9 Cover Locked) */}
         <div
           className={`absolute inset-0 z-[1] overflow-hidden ${
             isArchiveTrack && state.track?.mediaType !== 'audio' ? 'opacity-0' : 'opacity-80'
           }`}
           style={{ transform: 'translateZ(0)' }}
         >
-          <div className="w-[200%] h-[200%] -top-[50%] -left-[50%] absolute pointer-events-none">
+          <div className="yt-cover-frame pointer-events-none">
             <div id={bgElementId} className="w-full h-full pointer-events-none" />
           </div>
         </div>
@@ -206,12 +217,12 @@ export const Deck: React.FC<DeckProps> = ({
         {/* Clean Dark Tint Overlay (no backdrop-filter so cross-origin video never flickers) */}
         <div className="absolute inset-0 z-[3] pointer-events-none bg-neutral-950/45" />
 
-        {/* Subtle neon deck edge vignette */}
+        {/* Animated neon deck edge vignette */}
         <div
-          className={`absolute inset-0 z-[4] pointer-events-none ${
+          className={`absolute inset-0 z-[4] pointer-events-none animate-bg-aurora ${
             isDeckA
-              ? 'bg-gradient-to-b from-cyan-950/20 via-transparent to-black/55'
-              : 'bg-gradient-to-b from-amber-950/20 via-transparent to-black/55'
+              ? 'bg-gradient-to-b from-cyan-950/25 via-transparent to-black/55'
+              : 'bg-gradient-to-b from-amber-950/25 via-transparent to-black/55'
           }`}
         />
       </div>

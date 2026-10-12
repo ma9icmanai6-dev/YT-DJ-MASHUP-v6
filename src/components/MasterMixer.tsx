@@ -106,9 +106,12 @@ export const MasterMixer: React.FC<MasterMixerProps> = ({
   };
 
   return (
-    <div className="w-full lg:w-72 flex flex-col bg-neutral-900 border border-neutral-800 rounded-xl p-3 shadow-2xl justify-between gap-2.5">
+    <div className="w-full lg:w-72 shrink-0 flex flex-col bg-gradient-to-b from-neutral-900 via-neutral-950 to-neutral-900 animate-bg-aurora border border-neutral-800 rounded-xl p-3 shadow-2xl justify-between gap-2.5 relative overflow-hidden">
+      {/* Animated Mixer Cyber Grid Background */}
+      <div className="absolute -inset-10 z-0 pointer-events-none animate-bg-grid opacity-35" />
+
       {/* Mixer Header with Little Buttons Next to Master Mixer */}
-      <div className="flex items-center justify-between gap-1 border-b border-neutral-800 pb-2">
+      <div className="relative z-10 flex items-center justify-between gap-1 border-b border-neutral-800 pb-2">
         <div className="flex items-center gap-1.5 text-neutral-300 shrink-0">
           <Sliders className="w-3.5 h-3.5 text-amber-400" />
           <span className="text-[11px] font-mono font-bold tracking-wider uppercase">

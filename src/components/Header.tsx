@@ -47,12 +47,12 @@ export const Header: React.FC<HeaderProps> = ({
   const compatibility = keyA && keyB ? checkKeyCompatibility(keyA, keyB) : null;
 
   return (
-    <header className="w-full bg-neutral-950 border-b border-neutral-800 px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 shadow-lg select-none">
+    <header className="w-full min-w-full shrink-0 bg-gradient-to-r from-neutral-950 via-slate-900 to-neutral-950 animate-bg-aurora border-b border-neutral-800 px-3 sm:px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 shadow-lg select-none relative overflow-hidden">
       {/* Brand & Identity */}
       <div className="flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 p-0.5 flex items-center justify-center shadow-md shadow-cyan-500/20">
           <div className="w-full h-full bg-neutral-950 rounded-[7px] flex items-center justify-center">
-            <Disc className="w-4 h-4 text-cyan-400" />
+            <Disc className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '8s' }} />
           </div>
         </div>
 

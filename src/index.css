@@ -22,3 +22,88 @@
 .hover-marquee:hover .animate-marquee-slide {
   animation: slideBounce 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
+
+/* Lock YouTube IFrame containers to true 16:9 object-fit: cover geometry so videos NEVER shrink width on load */
+.yt-stage-container {
+  container-type: size;
+}
+
+.yt-cover-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-width: 100%;
+  min-height: 100%;
+  width: max(100cqw, 177.78cqh);
+  height: max(100cqh, 56.25cqw);
+  transform: translate(-50%, -50%) scale(1.02);
+}
+
+.yt-cover-frame iframe,
+#deck-a-player,
+#deck-b-player,
+#deck-a-bg-player,
+#deck-b-bg-player {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  display: block !important;
+  border: 0 !important;
+}
+
+/* Smooth GPU-accelerated animated backgrounds */
+@keyframes bgAuroraShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes bgKenBurns {
+  0% {
+    transform: scale(1.05) translate3d(0%, 0%, 0);
+  }
+  50% {
+    transform: scale(1.14) translate3d(-1.5%, -1%, 0);
+  }
+  100% {
+    transform: scale(1.05) translate3d(0%, 0%, 0);
+  }
+}
+
+@keyframes bgGridDrift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-40px, -40px, 0);
+  }
+}
+
+.animate-bg-aurora {
+  background-size: 250% 250%;
+  animation: bgAuroraShift 12s ease-in-out infinite;
+}
+
+.animate-bg-kenburns {
+  animation: bgKenBurns 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(6, 182, 212, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(245, 158, 11, 0.07) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: bgGridDrift 8s linear infinite;
+  will-change: transform;
+}
+
