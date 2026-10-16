@@ -12,6 +12,8 @@ import {
   Sparkles,
   Shuffle,
   Zap,
+  FolderUp,
+  Activity,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -25,6 +27,10 @@ interface HeaderProps {
   onOpenShortcutsModal: () => void;
   onOpenMidiModal?: () => void;
   onOpenMixxxFx?: () => void;
+  onOpenFaderFx?: () => void;
+  onOpenDynaMix?: () => void;
+  onOpenVMachine?: () => void;
+  onOpenLocalFile?: () => void;
   connectedControllersCount?: number;
   isMuted: boolean;
   onToggleMute: () => void;
@@ -42,6 +48,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShortcutsModal,
   onOpenMidiModal,
   onOpenMixxxFx,
+  onOpenFaderFx,
+  onOpenDynaMix,
+  onOpenVMachine,
+  onOpenLocalFile,
   connectedControllersCount = 0,
   isMuted,
   onToggleMute,
@@ -185,6 +195,54 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Zap className="w-3.5 h-3.5 text-purple-400" />
             <span className="hidden sm:inline">MIXXX FX</span>
+          </button>
+        )}
+
+        {/* Fader FX & 3-Slot MacroFX Chains (Ean Golden Fader FX Theory & Pioneer SoundColorFX) */}
+        {onOpenFaderFx && (
+          <button
+            onClick={onOpenFaderFx}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 bg-gradient-to-r from-purple-500/25 to-pink-500/25 text-pink-300 border-pink-500/50 hover:from-purple-500/35 hover:to-pink-500/35 shadow-sm"
+            title="Fader FX Theory (Ean Golden 2008), 3-Slot MacroFX Chains, Pioneer SoundColorFX & JogFX"
+          >
+            <Zap className="w-3.5 h-3.5 text-pink-400 fill-current" />
+            <span className="hidden sm:inline">FADER FX</span>
+          </button>
+        )}
+
+        {/* DynaMix Audio Transition & Energy Analysis Engine */}
+        {onOpenDynaMix && (
+          <button
+            onClick={onOpenDynaMix}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 bg-cyan-500/20 text-cyan-300 border-cyan-500/50 hover:bg-cyan-500/30 shadow-sm"
+            title="DynaMix (makalin/dynamix): Dynamic audio transition strategy & energy RMS profiling"
+          >
+            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">DYNAMIX</span>
+          </button>
+        )}
+
+        {/* V-Machine Visual Synthesizer & Audio Host */}
+        {onOpenVMachine && (
+          <button
+            onClick={onOpenVMachine}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 shadow-sm"
+            title="V-Machine (goolygu/v_machine): macOS VST/Audio Unit Host & Live Shader Synthesizer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">V-MACHINE</span>
+          </button>
+        )}
+
+        {/* Quick Load Local File Button */}
+        {onOpenLocalFile && (
+          <button
+            onClick={onOpenLocalFile}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border active:scale-95 bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30 shadow-sm"
+            title="Load local audio or video file (MP3, WAV, FLAC, MP4, M4A, etc.) into DJ Studio"
+          >
+            <FolderUp className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">LOAD FILE</span>
           </button>
         )}
 

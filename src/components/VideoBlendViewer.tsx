@@ -51,7 +51,9 @@ export const VideoBlendViewer: React.FC<VideoBlendViewerProps> = ({
           <button
             onClick={() =>
               setVisualizerMode((prev) =>
-                prev === 'radial-pulse'
+                prev === 'asva-motion'
+                  ? 'radial-pulse'
+                  : prev === 'radial-pulse'
                   ? 'synthwave-3d'
                   : prev === 'synthwave-3d'
                   ? 'kaleidoscope'
@@ -59,7 +61,7 @@ export const VideoBlendViewer: React.FC<VideoBlendViewerProps> = ({
                   ? 'spectrum-bars'
                   : prev === 'spectrum-bars'
                   ? 'none'
-                  : 'radial-pulse'
+                  : 'asva-motion'
               )
             }
             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-colors ${

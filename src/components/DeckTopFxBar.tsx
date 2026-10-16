@@ -6,6 +6,7 @@ interface DeckTopFxBarProps {
   deckId: 'A' | 'B';
   effectiveBpm: number;
   accentColor: 'cyan' | 'orange';
+  onOpenFaderFx?: () => void;
 }
 
 const DECK_FX_LIST: { id: OpenMixFxType; label: string; short: string }[] = [
@@ -19,10 +20,19 @@ const DECK_FX_LIST: { id: OpenMixFxType; label: string; short: string }[] = [
   { id: 'robot', label: 'ROBOT', short: 'Robot' },
 ];
 
+const FADER_FX_COMBOS = [
+  { id: 'detox', label: 'DETOX' },
+  { id: 'build', label: 'BUILD' },
+  { id: 'swirl', label: 'SWIRL' },
+  { id: 'dubecho', label: 'DUB ECHO' },
+  { id: 'noisesweep', label: 'NOISE' },
+];
+
 export const DeckTopFxBar: React.FC<DeckTopFxBarProps> = ({
   deckId,
   effectiveBpm,
   accentColor,
+  onOpenFaderFx,
 }) => {
   const [selectedFx, setSelectedFx] = useState<OpenMixFxType>('echo');
   const [isFxOn, setIsFxOn] = useState<boolean>(false);
@@ -66,9 +76,19 @@ export const DeckTopFxBar: React.FC<DeckTopFxBarProps> = ({
           <Zap className="w-3 h-3 fill-current" />
           <span>DECK {deckId} FX</span>
         </div>
+
+        {onOpenFaderFx && (
+          <button
+            onClick={onOpenFaderFx}
+            className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-purple-500/20 text-purple-300 hover:bg-purple-500 hover:text-black border border-purple-500/40 transition-all shadow-sm flex items-center gap-1"
+            title="Open 3-Slot Fader FX & MacroFX Suite"
+          >
+            <span>3-SLOT FADER FX</span>
+          </button>
+        )}
       </div>
 
-      {/* FX Selector Buttons */}
+      {/* FX Selector Buttons + Fader FX Combos */}
       <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full">
         {DECK_FX_LIST.map((fx) => (
           <button
@@ -83,6 +103,22 @@ export const DeckTopFxBar: React.FC<DeckTopFxBarProps> = ({
             }`}
           >
             {fx.label}
+          </button>
+        ))}
+
+        <div className="w-px h-4 bg-neutral-800 mx-1 shrink-0" />
+
+        {FADER_FX_COMBOS.map((combo) => (
+          <button
+            key={combo.id}
+            onClick={() => {
+              audioFx.setFxBpm(effectiveBpm);
+              audioFx.triggerFaderFx(combo.id, level / 100);
+            }}
+            className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-purple-950/40 text-purple-300 hover:bg-purple-600 hover:text-white border border-purple-800/60 transition-all shrink-0"
+            title={`Trigger ${combo.label} 3-slot combo`}
+          >
+            {combo.label}
           </button>
         ))}
       </div>

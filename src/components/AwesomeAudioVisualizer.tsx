@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 
 export type VisualizerMode =
   | 'none'
+  | 'asva-motion'
+  | 'v-machine'
   | 'radial-pulse'
   | 'synthwave-3d'
   | 'kaleidoscope'
@@ -51,6 +53,16 @@ interface Ripple {
   color: string;
 }
 
+interface AsvaParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  alpha: number;
+  color: string;
+}
+
 export const AwesomeAudioVisualizer: React.FC<AwesomeAudioVisualizerProps> = ({
   mode,
   theme = 'cyber-dual',
@@ -72,6 +84,7 @@ export const AwesomeAudioVisualizer: React.FC<AwesomeAudioVisualizerProps> = ({
   const starsRef = useRef<Star[]>([]);
   const matrixDropsRef = useRef<MatrixDrop[]>([]);
   const ripplesRef = useRef<Ripple[]>([]);
+  const asvaParticlesRef = useRef<AsvaParticle[]>([]);
   const barPeaksRef = useRef<number[]>([]);
   const smoothedFftRef = useRef<number[]>(new Array(64).fill(0));
   const timeRef = useRef<number>(0);
@@ -159,33 +172,50 @@ export const AwesomeAudioVisualizer: React.FC<AwesomeAudioVisualizerProps> = ({
       starsRef.current = stars;
     }
 
+    // Initialize ASVA streamline particles if not already done
+    if (asvaParticlesRef.current.length === 0) {
+      const particles: AsvaParticle[] = [];
+      for (let i = 0; i < 110; i++) {
+        particles.push({
+          x: Math.random() * 2400,
+          y: Math.random() * 900,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
+          size: 2 + Math.random() * 3.5,
+          alpha: 0.35 + Math.random() * 0.65,
+          color: i % 2 === 0 ? '#06b6d4' : '#f59e0b',
+        });
+      }
+      asvaParticlesRef.current = particles;
+    }
+
     let isRunning = true;
 
-    // Accurate resize function that syncs physical buffer pixels to CSS layout
+    // Accurate resize function that syncs physical buffer pixels to true element bounding box
     const resizeCanvas = () => {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const parent = canvas.parentElement;
       const parentRect = parent ? parent.getBoundingClientRect() : null;
 
-      const cssW = Math.max(
-        rect.width || 0,
-        parentRect?.width || 0,
-        canvas.clientWidth || 0,
-        parent?.clientWidth || 0,
-        window.innerWidth || 800
+      const cssW = Math.round(
+        rect.width > 0
+          ? rect.width
+          : parentRect && parentRect.width > 0
+          ? parentRect.width
+          : canvas.clientWidth || parent?.clientWidth || window.innerWidth
       );
-      const cssH = Math.max(
-        rect.height || 0,
-        parentRect?.height || 0,
-        canvas.clientHeight || 0,
-        parent?.clientHeight || 0,
-        250
+      const cssH = Math.round(
+        rect.height > 0
+          ? rect.height
+          : parentRect && parentRect.height > 0
+          ? parentRect.height
+          : canvas.clientHeight || parent?.clientHeight || 300
       );
 
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const targetW = Math.floor(cssW * dpr);
-      const targetH = Math.floor(cssH * dpr);
+      const targetW = Math.max(1, Math.floor(cssW * dpr));
+      const targetH = Math.max(1, Math.floor(cssH * dpr));
 
       if (canvas.width !== targetW || canvas.height !== targetH) {
         canvas.width = targetW;
@@ -287,26 +317,348 @@ export const AwesomeAudioVisualizer: React.FC<AwesomeAudioVisualizerProps> = ({
       ctx.clearRect(0, 0, w, h);
 
       // ==========================================
-      // 1. RADIAL PULSE (Circular Audio Spectrum)
+      // 0. ASVA MOTION (Audio-Synchronized Visual Animation - ECCV 2024 lzhangbj/ASVA)
       // ==========================================
-      if (mode === 'radial-pulse') {
+      if (mode === 'asva-motion') {
+        ctx.save();
+
+        // 1. AVSync15 Audio-Conditioned Dynamic Deformation Grid (Spanning 100% full width and height)
+        const cols = 16;
+        const rows = 8;
+        const cellW = w / cols;
+        const cellH = h / rows;
+
+        ctx.lineWidth = 1.2;
+        ctx.shadowBlur = 14;
+
+        // Draw horizontal deformed audio flow streamlines across 100% width
+        for (let r = 0; r <= rows; r++) {
+          const baseY = r * cellH;
+          const bin = Math.floor((r / rows) * numBins);
+          const strokeCol = r % 2 === 0 ? colors.primary : colors.secondary;
+
+          ctx.strokeStyle = strokeCol;
+          ctx.shadowColor = strokeCol;
+          ctx.globalAlpha = 0.45 + beatPulse * 0.45;
+
+          ctx.beginPath();
+          for (let x = 0; x <= w; x += 15) {
+            const xRatio = x / w;
+            const xFreq = fft[Math.floor(xRatio * numBins)] || 0.1;
+            // Wave displacement temporal dynamics
+            const yOffset =
+              Math.sin(x * 0.015 + t * 4 + r) * (14 + xFreq * 36 * (1 + beatPulse * 0.8)) +
+              Math.cos(t * 3 + x * 0.02) * (beatPulse * 15);
+
+            if (x === 0) ctx.moveTo(0, baseY + yOffset);
+            else ctx.lineTo(x, baseY + yOffset);
+          }
+          ctx.stroke();
+        }
+
+        // Draw vertical optical flow displacement lines across 100% height
+        for (let c = 0; c <= cols; c++) {
+          const baseX = c * cellW;
+          const bin = Math.floor((c / cols) * numBins);
+          const freqVal = fft[bin] || 0.1;
+          const strokeCol = c < cols / 2 ? colors.primary : colors.secondary;
+
+          ctx.strokeStyle = strokeCol;
+          ctx.shadowColor = strokeCol;
+          ctx.globalAlpha = 0.35 + beatPulse * 0.35;
+
+          ctx.beginPath();
+          for (let y = 0; y <= h; y += 15) {
+            const xOffset =
+              Math.sin(y * 0.02 + t * 3.5 + c) * (10 + freqVal * 25 * (1 + beatPulse * 0.6));
+            if (y === 0) ctx.moveTo(baseX + xOffset, 0);
+            else ctx.lineTo(baseX + xOffset, y);
+          }
+          ctx.stroke();
+        }
+
+        // 2. Optical Flow Motion Vectors (Directional arrows showing audio motion dynamics)
+        const vectorCols = 8;
+        const vectorRows = 4;
+        const vStepX = w / (vectorCols + 1);
+        const vStepY = h / (vectorRows + 1);
+
+        for (let vr = 1; vr <= vectorRows; vr++) {
+          for (let vc = 1; vc <= vectorCols; vc++) {
+            const vxBase = vc * vStepX;
+            const vyBase = vr * vStepY;
+            const binIdx = (vc * 7 + vr * 11) % numBins;
+            const energy = fft[binIdx] || 0.1;
+
+            // Optical flow angle conditioned on audio phase and beatPulse
+            const angle = t * 2.5 + (vc / vectorCols) * Math.PI + (vr / vectorRows) * Math.PI * 0.5 + energy * Math.PI;
+            const arrowLen = 12 + energy * 30 + beatPulse * 16;
+            const ax = vxBase + Math.cos(angle) * arrowLen;
+            const ay = vyBase + Math.sin(angle) * arrowLen;
+
+            const vecColor = vc <= vectorCols / 2 ? colors.primary : colors.secondary;
+            ctx.strokeStyle = vecColor;
+            ctx.fillStyle = vecColor;
+            ctx.shadowColor = vecColor;
+            ctx.shadowBlur = 8;
+            ctx.lineWidth = 1.8;
+            ctx.globalAlpha = 0.75 + beatPulse * 0.25;
+
+            // Vector arrow line
+            ctx.beginPath();
+            ctx.moveTo(vxBase, vyBase);
+            ctx.lineTo(ax, ay);
+            ctx.stroke();
+
+            // Arrowhead
+            const headAngle = Math.PI / 6;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(ax - 6 * Math.cos(angle - headAngle), ay - 6 * Math.sin(angle - headAngle));
+            ctx.lineTo(ax - 6 * Math.cos(angle + headAngle), ay - 6 * Math.sin(angle + headAngle));
+            ctx.closePath();
+            ctx.fill();
+
+            // Keyframe node center dot
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(vxBase, vyBase, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // 3. Audio-Conditioned Streamline Kinetic Particles (100% full area coverage)
+        asvaParticlesRef.current.forEach((p, idx) => {
+          const bin = idx % numBins;
+          const energy = fft[bin] || 0.1;
+          const speedFactor = (1 + energy * 2.5) * (1 + beatPulse * 1.5);
+
+          p.x += p.vx * speedFactor;
+          p.y += p.vy * speedFactor;
+
+          // Wrap around canvas full dimensions
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h;
+          if (p.y > h) p.y = 0;
+
+          ctx.fillStyle = idx % 2 === 0 ? colors.primary : colors.secondary;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 10;
+          ctx.globalAlpha = p.alpha * (0.6 + beatPulse * 0.4);
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * (1 + energy * 0.8), 0, Math.PI * 2);
+          ctx.fill();
+
+          // Particle trailing velocity streak
+          ctx.strokeStyle = idx % 2 === 0 ? colors.primary : colors.secondary;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.vx * 4, p.y - p.vy * 4);
+          ctx.stroke();
+        });
+
+        // 4. AVSync Temporal Beat Shockwave Rings across screen center
+        if (beatPulse > 0.4) {
+          const shockRadius = (1 - (beatPhase || 0.1)) * Math.max(w, h) * 0.6;
+          ctx.strokeStyle = colors.accent;
+          ctx.lineWidth = 2.5 * beatPulse;
+          ctx.shadowColor = colors.accent;
+          ctx.shadowBlur = 20;
+          ctx.globalAlpha = beatPulse * 0.7;
+
+          ctx.beginPath();
+          ctx.arc(w / 2, h / 2, shockRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // 5. ASVA Corner HUD Watermark
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px monospace';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = colors.primary;
+        ctx.globalAlpha = 0.85;
+        ctx.fillText('ASVA [ECCV 2024] · AUDIO-SYNCHRONIZED VISUAL ANIMATION', 16, 20);
+        ctx.font = '9px monospace';
+        ctx.fillStyle = colors.primary;
+        ctx.fillText(`AVSYNC DYNAMICS: ${(0.82 + beatPulse * 0.17).toFixed(3)} | OPTICAL FLOW VELOCITY: ${(activeBpm * (1 + beatPulse)).toFixed(1)} px/s`, 16, 34);
+
+        ctx.restore();
+      }
+
+      // ==========================================
+      // V-MACHINE (Visual Loop Machine - MTD Multi-Temporal Dimension)
+      // Based on goolygu/v_machine
+      // ==========================================
+      else if (mode === 'v-machine') {
+        ctx.save();
         const cx = w / 2;
         const cy = h / 2;
-        const baseRadius = Math.min(w, h) * 0.22 + beatPulse * 16;
-        const maxBarLen = Math.min(w * 0.42, h * 0.42) - baseRadius;
+        const rings = 16;
+        const audioDrive = (1 + beatPulse * 2.5);
+
+        ctx.lineWidth = 2.2;
+        ctx.shadowBlur = 18;
+
+        for (let i = 0; i < rings; i++) {
+          const progress = ((t * 0.8 * audioDrive + i / rings) % 1.0 + 1.0) % 1.0;
+          const radius = Math.pow(progress, 2.2) * Math.hypot(w, h) * 0.62;
+          const alpha = Math.min(1, progress * 1.6);
+
+          const col = i % 2 === 0 ? colors.primary : colors.secondary;
+          ctx.strokeStyle = col;
+          ctx.shadowColor = col;
+          ctx.globalAlpha = alpha * (0.65 + beatPulse * 0.35);
+
+          ctx.beginPath();
+          ctx.arc(cx, cy, Math.max(2, radius), 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Multi-Temporal Dimension Spoke Rays
+          const spokes = 8;
+          for (let s = 0; s < spokes; s++) {
+            const ang = (s / spokes) * Math.PI * 2 + t * 0.4;
+            const innerR = radius * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * innerR, cy + Math.sin(ang) * innerR);
+            ctx.lineTo(cx + Math.cos(ang) * radius, cy + Math.sin(ang) * radius);
+            ctx.stroke();
+          }
+        }
+
+        // Full-width audio waveform conduits
+        ctx.strokeStyle = colors.accent;
+        ctx.shadowColor = colors.accent;
+        ctx.lineWidth = 1.5 + beatPulse * 2;
+        ctx.globalAlpha = 0.6 + beatPulse * 0.4;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 12) {
+          const bin = Math.floor((x / w) * numBins);
+          const yWarp = h * 0.85 + (fft[bin] || 0.1) * 30 * Math.sin(x * 0.02 + t * 4);
+          if (x === 0) ctx.moveTo(0, yWarp);
+          else ctx.lineTo(x, yWarp);
+        }
+        ctx.stroke();
+
+        // V-Machine HUD Telemetry
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px monospace';
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = colors.primary;
+        ctx.globalAlpha = 0.85;
+        ctx.fillText('V-MACHINE [MTD] · MULTI-TEMPORAL DIMENSION VISUAL LOOP', 16, 20);
+        ctx.font = '9px monospace';
+        ctx.fillStyle = colors.primary;
+        ctx.fillText(`MTD TEMPORAL VELOCITY: ${(activeBpm * audioDrive).toFixed(1)} FPS | REVERSE SYNC: ACTIVE`, 16, 34);
+
+        ctx.restore();
+      }
+
+      // ==========================================
+      // 1. RADIAL PULSE (Circular Audio Spectrum - Widescreen Full-Area Constellation)
+      // ==========================================
+      else if (mode === 'radial-pulse') {
+        const cx = w / 2;
+        const cy = h / 2;
+        const baseRadius = Math.min(w * 0.28, h * 0.24) + beatPulse * 16;
+        const maxBarLen = Math.min(w * 0.48, h * 0.44) - baseRadius;
         const barCount = 64;
 
         // Massive ambient luminous background glow filling full screen
-        const glowGrad = ctx.createRadialGradient(cx, cy, baseRadius * 0.2, cx, cy, Math.max(w, h) * 0.7);
+        const glowGrad = ctx.createRadialGradient(cx, cy, baseRadius * 0.2, cx, cy, Math.max(w, h) * 0.75);
         glowGrad.addColorStop(0, colors.glow);
         glowGrad.addColorStop(0.5, 'rgba(0,0,0,0.15)');
         glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = glowGrad;
         ctx.beginPath();
-        ctx.arc(cx, cy, Math.max(w, h) * 0.7, 0, Math.PI * 2);
+        ctx.arc(cx, cy, Math.max(w, h) * 0.75, 0, Math.PI * 2);
         ctx.fill();
 
-        // Inner glowing core ring
+        // 1A. Full-Width Edge-to-Edge Audio Frequency Waveforms at Top and Bottom
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 12;
+
+        // Top edge frequency wave (from x = 0 to x = w)
+        ctx.strokeStyle = colors.primary;
+        ctx.shadowColor = colors.primary;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 10) {
+          const bin = Math.floor((x / w) * numBins);
+          const yWave = 22 + (fft[bin] || 0.1) * 35 * Math.sin(x * 0.02 + t * 4);
+          if (x === 0) ctx.moveTo(0, yWave);
+          else ctx.lineTo(x, yWave);
+        }
+        ctx.stroke();
+
+        // Bottom edge frequency wave (from x = 0 to x = w)
+        ctx.strokeStyle = colors.secondary;
+        ctx.shadowColor = colors.secondary;
+        ctx.beginPath();
+        for (let x = 0; x <= w; x += 10) {
+          const bin = Math.floor((1 - x / w) * numBins);
+          const yWave = h - 22 - (fft[bin] || 0.1) * 35 * Math.sin(x * 0.02 - t * 4);
+          if (x === 0) ctx.moveTo(0, yWave);
+          else ctx.lineTo(x, yWave);
+        }
+        ctx.stroke();
+
+        // Center connecting laser conduit across full screen
+        ctx.strokeStyle = colors.accent;
+        ctx.shadowColor = colors.accent;
+        ctx.lineWidth = 1 + beatPulse * 2;
+        ctx.globalAlpha = 0.5 + beatPulse * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(0, cy);
+        ctx.lineTo(cx - baseRadius * 1.2, cy);
+        ctx.moveTo(cx + baseRadius * 1.2, cy);
+        ctx.lineTo(w, cy);
+        ctx.stroke();
+        ctx.restore();
+
+        // 1B. Left (Deck A) and Right (Deck B) Satellite Spectrum Rings for Widescreen Balance
+        const satRadius = baseRadius * 0.45;
+        const satOffset = Math.min(w * 0.32, Math.max(120, w * 0.30));
+
+        // Deck A Satellite (Left)
+        ctx.save();
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = colors.primary;
+        ctx.strokeStyle = colors.primary;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx - satOffset, cy, satRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let s = 0; s < 24; s++) {
+          const ang = (s / 24) * Math.PI * 2 - t * 0.5;
+          const sVal = fft[s % numBins] || 0.1;
+          const sLen = sVal * (satRadius * 0.6);
+          ctx.beginPath();
+          ctx.moveTo(cx - satOffset + Math.cos(ang) * satRadius, cy + Math.sin(ang) * satRadius);
+          ctx.lineTo(cx - satOffset + Math.cos(ang) * (satRadius + sLen), cy + Math.sin(ang) * (satRadius + sLen));
+          ctx.stroke();
+        }
+
+        // Deck B Satellite (Right)
+        ctx.shadowColor = colors.secondary;
+        ctx.strokeStyle = colors.secondary;
+        ctx.beginPath();
+        ctx.arc(cx + satOffset, cy, satRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let s = 0; s < 24; s++) {
+          const ang = (s / 24) * Math.PI * 2 + t * 0.5;
+          const sVal = fft[(s + 16) % numBins] || 0.1;
+          const sLen = sVal * (satRadius * 0.6);
+          ctx.beginPath();
+          ctx.moveTo(cx + satOffset + Math.cos(ang) * satRadius, cy + Math.sin(ang) * satRadius);
+          ctx.lineTo(cx + satOffset + Math.cos(ang) * (satRadius + sLen), cy + Math.sin(ang) * (satRadius + sLen));
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 1C. Inner glowing core ring
         ctx.save();
         ctx.shadowBlur = 20;
         ctx.shadowColor = colors.primary;
@@ -323,7 +675,7 @@ export const AwesomeAudioVisualizer: React.FC<AwesomeAudioVisualizerProps> = ({
         ctx.stroke();
         ctx.restore();
 
-        // Radial Spectrum Bars
+        // 1D. Radial Spectrum Bars
         for (let i = 0; i < barCount; i++) {
           const angle = (i / barCount) * Math.PI * 2 - Math.PI / 2 + t * 0.2;
           const binIndex = i < barCount / 2 ? i : barCount - i;

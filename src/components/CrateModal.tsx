@@ -20,7 +20,9 @@ import {
   Film,
   Loader2,
   Youtube,
+  FolderUp,
 } from 'lucide-react';
+import { loadLocalFileAsTrack } from '../services/localTrackLoader';
 
 interface CrateModalProps {
   isOpen: boolean;

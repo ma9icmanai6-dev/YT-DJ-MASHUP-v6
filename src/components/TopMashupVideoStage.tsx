@@ -79,14 +79,14 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
   // Default to DOUBLED (2X) top stage size with a Minimize button to shrink in
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
 
-  // Awesome Audio Visualizer state (inspired by VolkanSah/Awesome-Audio-Visualizer)
-  const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('radial-pulse');
+  // Awesome Audio Visualizer state (inspired by VolkanSah/Awesome-Audio-Visualizer & lzhangbj/ASVA)
+  const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('asva-motion');
   const [visualizerTheme, setVisualizerTheme] = useState<VisualizerTheme>('cyber-dual');
   const [visualizerBlend, setVisualizerBlend] = useState<'screen' | 'overlay' | 'difference' | 'normal'>('screen');
   const [visualizerOpacity, setVisualizerOpacity] = useState<number>(0.85);
   const [visualizerArea, setVisualizerArea] = useState<'cinema' | 'full-stage'>('cinema');
 
-  // Live Video Mixing Effects Suite
+  // Live Video Mixing Effects Suite (Including ASVA Audio-Synchronized Visual Animation)
   const [videoFx, setVideoFx] = useState<{
     glitch: boolean;
     beatPulse: boolean;
@@ -97,6 +97,7 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
     mirror: boolean;
     strobe: boolean;
     invert: boolean;
+    asvaMotion: boolean;
   }>({
     glitch: false,
     beatPulse: false,
@@ -107,6 +108,7 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
     mirror: false,
     strobe: false,
     invert: false,
+    asvaMotion: true,
   });
 
   // Sync displayMode
@@ -199,11 +201,11 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
     >
       {/* Full Top Stage Visualizer Layer (Stretches Edge-to-Edge Across the Entire Top Area) */}
       {visualizerMode !== 'none' && visualizerArea === 'full-stage' && (
-        <div className="absolute inset-0 w-full h-full min-w-full pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 w-full h-full min-w-full pointer-events-none z-[22] overflow-hidden">
           <AwesomeAudioVisualizer
             mode={visualizerMode}
             theme={visualizerTheme}
-            opacity={visualizerOpacity * 0.7}
+            opacity={visualizerOpacity}
             blendMode={visualizerBlend}
             isPlayingA={isPlayingA}
             isPlayingB={isPlayingB}
@@ -409,6 +411,8 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
             {(
               [
                 { id: 'none', label: 'OFF' },
+                { id: 'asva-motion', label: 'ASVA MOTION' },
+                { id: 'v-machine', label: 'V-MACHINE MTD' },
                 { id: 'radial-pulse', label: 'RADIAL PULSE' },
                 { id: 'synthwave-3d', label: 'SYNTHWAVE 3D' },
                 { id: 'kaleidoscope', label: 'KALEIDOSCOPE' },
@@ -512,6 +516,20 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
               <Zap className="w-3.5 h-3.5 text-purple-400" />
               <span>VIDEO POST FX:</span>
             </span>
+
+            {/* ASVA: Audio-Synchronized Visual Animation (ECCV 2024 - lzhangbj/ASVA) */}
+            <button
+              onClick={() => setVideoFx((p) => ({ ...p, asvaMotion: !p.asvaMotion }))}
+              className={`px-2 py-0.5 rounded border transition-all flex items-center gap-1 ${
+                videoFx.asvaMotion
+                  ? 'bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-400 text-black border-cyan-300 font-black shadow-md'
+                  : 'bg-neutral-900 text-cyan-400 border-cyan-800/60 hover:text-white hover:border-cyan-500'
+              }`}
+              title="ASVA (ECCV 2024): Audio-Synchronized Visual Animation - temporally guides video dynamics, mesh deformation, and optical flow"
+            >
+              <Sparkles className="w-3 h-3 fill-current" />
+              <span>ASVA MOTION</span>
+            </button>
 
             <button
               onClick={() => setVideoFx((p) => ({ ...p, glitch: !p.glitch }))}
@@ -630,7 +648,8 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
             videoFx.bloom ||
             videoFx.mirror ||
             videoFx.strobe ||
-            videoFx.invert) && (
+            videoFx.invert ||
+            videoFx.asvaMotion) && (
             <button
               onClick={() =>
                 setVideoFx({
@@ -643,6 +662,7 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                   mirror: false,
                   strobe: false,
                   invert: false,
+                  asvaMotion: false,
                 })
               }
               className="px-2 py-0.5 rounded bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white text-[9px] font-bold border border-neutral-700"
@@ -665,17 +685,49 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
           videoFx.cyberpunk ? 'fx-cyberpunk' : ''
         } ${videoFx.acidTrip ? 'fx-acid-trip' : ''} ${videoFx.vhsTracking ? 'fx-vhs-tracking' : ''} ${
           videoFx.bloom ? 'fx-bloom' : ''
-        } ${videoFx.mirror ? 'fx-mirror-h' : ''} ${videoFx.invert ? 'fx-invert' : ''}`}
+        } ${videoFx.mirror ? 'fx-mirror-h' : ''} ${videoFx.invert ? 'fx-invert' : ''} ${
+          videoFx.asvaMotion ? 'fx-asva-motion' : ''
+        }`}
         style={
           {
             isolation: 'isolate',
             '--beat-pulse-speed': `${(60 / Math.max(60, isPlayingB ? bpmB : bpmA)).toFixed(2)}s`,
+            '--asva-tempo': `${(60 / Math.max(60, isPlayingB ? bpmB : bpmA)).toFixed(2)}s`,
           } as React.CSSProperties
         }
       >
         {/* Realtime Strobe Flash Overlay */}
         {videoFx.strobe && (
           <div className="absolute inset-0 pointer-events-none z-40 bg-white fx-strobe-flash mix-blend-screen" />
+        )}
+
+        {/* ASVA: Audio-Synchronized Visual Animation Vector Grid Overlay (ECCV 2024 lzhangbj/ASVA) */}
+        {videoFx.asvaMotion && (
+          <div className="absolute inset-0 pointer-events-none z-[16] overflow-hidden mix-blend-screen opacity-60">
+            <svg className="w-full h-full min-w-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="asvaFlowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="50%" stopColor="#d946ef" />
+                  <stop offset="100%" stopColor="#f59e0b" />
+                </linearGradient>
+              </defs>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <line
+                  key={`asva-line-${i}`}
+                  x1="0"
+                  y1={`${(i + 1) * 11.5}%`}
+                  x2="100%"
+                  y2={`${(i + 1) * 11.5}%`}
+                  stroke="url(#asvaFlowGrad)"
+                  strokeWidth="0.85"
+                  strokeDasharray="6 8"
+                  opacity={0.45}
+                  className="animate-pulse"
+                />
+              ))}
+            </svg>
+          </div>
         )}
         {/* Animated Cyber-Stage Background Layer Behind Both Videos */}
         <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-gradient-to-r from-cyan-950/40 via-purple-950/35 to-amber-950/40 animate-bg-aurora">
@@ -960,6 +1012,14 @@ export const TopMashupVideoStage: React.FC<TopMashupVideoStageProps> = ({
                 <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
                 <span className="text-[10px] font-mono font-black text-cyan-300 tracking-wider uppercase">
                   VJ {visualizerMode.replace('-', ' ')}
+                </span>
+              </div>
+            )}
+            {videoFx.asvaMotion && (
+              <div className="bg-black/90 px-3 py-0.5 rounded-full border border-fuchsia-500/60 flex items-center gap-1.5 shadow-xl animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-400" />
+                <span className="text-[10px] font-mono font-black text-fuchsia-300 tracking-wider">
+                  ASVA ECCV'24 · AUDIO-SYNC DYNAMICS
                 </span>
               </div>
             )}

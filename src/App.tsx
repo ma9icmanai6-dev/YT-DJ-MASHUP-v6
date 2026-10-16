@@ -14,6 +14,10 @@ import { DjControllerEngine, ControllerDevice, DjActionKey } from './services/co
 import { CrateModal } from './components/CrateModal';
 import { RecordingModal } from './components/RecordingModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { FaderFxModal } from './components/FaderFxModal';
+import { DynaMixModal } from './components/DynaMixModal';
+import { VMachineModal } from './components/VMachineModal';
+import { loadLocalFileAsTrack } from './services/localTrackLoader';
 import { Shuffle, Sparkles, ArrowLeftRight, Mic, Piano } from 'lucide-react';
 
 export default function App() {
@@ -106,6 +110,11 @@ export default function App() {
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState<boolean>(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
   const [isMixxxFxModalOpen, setIsMixxxFxModalOpen] = useState<boolean>(false);
+  const [isFaderFxModalOpen, setIsFaderFxModalOpen] = useState<boolean>(false);
+  const [isDynaMixModalOpen, setIsDynaMixModalOpen] = useState<boolean>(false);
+  const [isVMachineModalOpen, setIsVMachineModalOpen] = useState<boolean>(false);
+  const [localFileTargetDeck, setLocalFileTargetDeck] = useState<'A' | 'B'>('A');
+  const headerFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [embedErrorA, setEmbedErrorA] = useState<boolean>(false);
   const [embedErrorB, setEmbedErrorB] = useState<boolean>(false);
@@ -1055,6 +1064,21 @@ export default function App() {
     }
   };
 
+  const handleHeaderLocalFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const { track, dynamix } = await loadLocalFileAsTrack(file);
+        (track as any).dynamix = dynamix;
+        handleLoadTrackToDeck(localFileTargetDeck, track);
+        setLocalFileTargetDeck((prev) => (prev === 'A' ? 'B' : 'A'));
+      } catch (err) {
+        console.error('Failed to load local file from header:', err);
+      }
+    }
+    if (e.target) e.target.value = '';
+  };
+
   // Global Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1243,6 +1267,13 @@ export default function App() {
           onOpenMidiModal={() => setIsMidiModalOpen(true)}
           connectedControllersCount={controllerDevices.length}
           onOpenMixxxFx={() => setIsMixxxFxModalOpen(true)}
+          onOpenFaderFx={() => setIsFaderFxModalOpen(true)}
+          onOpenDynaMix={() => setIsDynaMixModalOpen(true)}
+          onOpenVMachine={() => setIsVMachineModalOpen(true)}
+          onOpenLocalFile={() => {
+            setLocalFileTargetDeck('A');
+            headerFileInputRef.current?.click();
+          }}
           isMuted={isMuted}
           onToggleMute={() => {
             setIsMuted(!isMuted);
@@ -1323,6 +1354,8 @@ export default function App() {
             showVideo={false}
             resetSearchTrigger={searchResetTrigger}
             onChangeNeuralMix={(stems) => handleUpdateNeuralMix('A', stems)}
+            onOpenDynaMix={() => setIsDynaMixModalOpen(true)}
+            onOpenFaderFx={() => setIsFaderFxModalOpen(true)}
           />
 
           {/* MASTER MIXER CONSOLE */}
@@ -1392,6 +1425,8 @@ export default function App() {
             showVideo={false}
             resetSearchTrigger={searchResetTrigger}
             onChangeNeuralMix={(stems) => handleUpdateNeuralMix('B', stems)}
+            onOpenDynaMix={() => setIsDynaMixModalOpen(true)}
+            onOpenFaderFx={() => setIsFaderFxModalOpen(true)}
           />
         </div>
       </main>
@@ -1440,6 +1475,72 @@ export default function App() {
       <ShortcutsModal
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
+      />
+
+      {/* Hidden Global Local File Input */}
+      <input
+        type="file"
+        ref={headerFileInputRef}
+        onChange={handleHeaderLocalFile}
+        accept="audio/*,video/*,.mp3,.wav,.flac,.m4a,.ogg,.aac,.mp4,.webm"
+        className="hidden"
+      />
+
+      {/* Fader FX Theory & 3-Slot MacroFX Chains Modal */}
+      <FaderFxModal
+        isOpen={isFaderFxModalOpen}
+        onClose={() => setIsFaderFxModalOpen(false)}
+        bpmA={deckA.effectiveBpm}
+        bpmB={deckB.effectiveBpm}
+      />
+
+      {/* DynaMix Audio Transition & Energy Engine Modal */}
+      <DynaMixModal
+        isOpen={isDynaMixModalOpen}
+        onClose={() => setIsDynaMixModalOpen(false)}
+        deckATrack={deckA.track}
+        deckBTrack={deckB.track}
+        onApplyCuesA={(cues) => {
+          setDeckA((prev) => ({
+            ...prev,
+            cuePoints: [
+              { id: 1, time: cues.intro, label: 'Intro (DynaMix)' },
+              { id: 2, time: cues.drop, label: 'Drop (DynaMix)' },
+              { id: 3, time: cues.breakdown, label: 'Break (DynaMix)' },
+              { id: 4, time: cues.outro, label: 'Outro (DynaMix)' },
+            ],
+          }));
+        }}
+        onApplyCuesB={(cues) => {
+          setDeckB((prev) => ({
+            ...prev,
+            cuePoints: [
+              { id: 1, time: cues.intro, label: 'Intro (DynaMix)' },
+              { id: 2, time: cues.drop, label: 'Drop (DynaMix)' },
+              { id: 3, time: cues.breakdown, label: 'Break (DynaMix)' },
+              { id: 4, time: cues.outro, label: 'Outro (DynaMix)' },
+            ],
+          }));
+        }}
+        onOpenLocalFileA={() => {
+          setLocalFileTargetDeck('A');
+          headerFileInputRef.current?.click();
+        }}
+        onOpenLocalFileB={() => {
+          setLocalFileTargetDeck('B');
+          headerFileInputRef.current?.click();
+        }}
+      />
+
+      {/* V-Machine Visual Synthesizer & Audio Host Modal */}
+      <VMachineModal
+        isOpen={isVMachineModalOpen}
+        onClose={() => setIsVMachineModalOpen(false)}
+        isPlayingA={deckA.isPlaying}
+        isPlayingB={deckB.isPlaying}
+        bpmA={deckA.effectiveBpm}
+        bpmB={deckB.effectiveBpm}
+        crossfader={crossfader}
       />
     </div>
   );

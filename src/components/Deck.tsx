@@ -9,7 +9,9 @@ import { BeatLoop } from './BeatLoop';
 import { WaveformScrubber } from './WaveformScrubber';
 import { DeckQuickSearch } from './DeckQuickSearch';
 import { SlidingTitle } from './SlidingTitle';
-import { Play, Pause, FolderOpen } from 'lucide-react';
+import { DeckTopFxBar } from './DeckTopFxBar';
+import { loadLocalFileAsTrack } from '../services/localTrackLoader';
+import { Play, Pause, FolderOpen, FolderUp, Activity } from 'lucide-react';
 
 interface DeckProps {
   state: DeckState;
@@ -42,6 +44,8 @@ interface DeckProps {
   showVideo: boolean;
   resetSearchTrigger?: number;
   onChangeNeuralMix?: (stems: import('../types/dj').NeuralMixStems) => void;
+  onOpenDynaMix?: () => void;
+  onOpenFaderFx?: () => void;
 }
 
 export const Deck: React.FC<DeckProps> = ({
@@ -72,6 +76,8 @@ export const Deck: React.FC<DeckProps> = ({
   customTracks = [],
   resetSearchTrigger = 0,
   onChangeNeuralMix,
+  onOpenDynaMix,
+  onOpenFaderFx,
 }) => {
   const isDeckA = state.id === 'A';
   const accentColor = isDeckA ? 'cyan' : 'orange';
@@ -79,6 +85,48 @@ export const Deck: React.FC<DeckProps> = ({
   const accentBadge = isDeckA
     ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40'
     : 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+
+  const localFileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = React.useState<boolean>(false);
+
+  const handleLocalFile = async (file: File) => {
+    try {
+      const { track, dynamix } = await loadLocalFileAsTrack(file);
+      (track as any).dynamix = dynamix;
+      onLoadTrack(track);
+    } catch (err) {
+      console.error('Failed to load local file:', err);
+    }
+  };
+
+  const handleLocalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleLocalFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleLocalFile(file);
+    }
+  };
 
   // Calculate loop length in seconds based on current effective BPM
   const loopDuration = (60 / Math.max(20, state.effectiveBpm)) * state.loop.lengthBeats;
@@ -157,7 +205,29 @@ export const Deck: React.FC<DeckProps> = ({
   }, [state.pitch, isArchiveTrack]);
 
   return (
-    <div className={`flex-1 min-w-0 flex flex-col bg-neutral-950 rounded-2xl border-2 ${accentBorder} p-2.5 sm:p-3 shadow-2xl gap-2.5 relative group`}>
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`flex-1 min-w-0 flex flex-col bg-neutral-950 rounded-2xl border-2 ${
+        isDraggingOver ? 'border-emerald-400 shadow-emerald-500/30' : accentBorder
+      } p-2.5 sm:p-3 shadow-2xl gap-2.5 relative group`}
+    >
+      {/* Drag & Drop Local File Glow Overlay */}
+      {isDraggingOver && (
+        <div className="absolute inset-0 z-50 rounded-2xl bg-black/90 border-4 border-dashed border-emerald-400 flex flex-col items-center justify-center gap-3 backdrop-blur-sm animate-pulse pointer-events-none">
+          <FolderUp className="w-12 h-12 text-emerald-400 animate-bounce" />
+          <div className="text-center">
+            <span className="text-sm font-black text-white uppercase tracking-wider block">
+              DROP AUDIO OR VIDEO FILE TO LOAD DECK {state.id}
+            </span>
+            <span className="text-xs text-neutral-400 font-sans mt-1 block">
+              Supports MP3, WAV, MP4, FLAC, M4A, OGG, WEBM · Auto-detects BPM & Key
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* BOTTOM LAYER FULL-DECK LIVE VIDEO BACKGROUND: Plays under the entire deck on both sides without flashing */}
       <div
         className="yt-stage-container absolute inset-0 z-0 rounded-2xl overflow-hidden pointer-events-none select-none bg-black"
@@ -269,8 +339,8 @@ export const Deck: React.FC<DeckProps> = ({
             </div>
           </div>
 
-          {/* Action Controls: Search Input + Load Track Button */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Action Controls: Search Input + Local File + DynaMix + Load Track Button */}
+          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
             {/* Quick Search Next to Load Track */}
             <DeckQuickSearch
               deckId={state.id}
@@ -279,6 +349,38 @@ export const Deck: React.FC<DeckProps> = ({
               customTracks={customTracks}
               resetTrigger={resetSearchTrigger}
             />
+
+            {/* Hidden Local File Input */}
+            <input
+              type="file"
+              ref={localFileInputRef}
+              onChange={handleLocalFileChange}
+              accept="audio/*,video/*,.mp3,.wav,.flac,.m4a,.ogg,.aac,.mp4,.webm"
+              className="hidden"
+            />
+
+            {/* Load Local Audio/Video File Button */}
+            <button
+              onClick={() => localFileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-neutral-900/90 hover:bg-neutral-800 text-emerald-300 hover:text-white border border-emerald-500/40 hover:border-emerald-400 transition-colors shrink-0 active:scale-95 shadow-sm"
+              title="Load local audio or video file (MP3, WAV, MP4, FLAC, M4A, etc.) into Deck"
+            >
+              <FolderUp className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">LOCAL FILE</span>
+              <span className="sm:hidden">LOCAL</span>
+            </button>
+
+            {/* DynaMix Audio Transition & Energy Analysis Button */}
+            {onOpenDynaMix && (
+              <button
+                onClick={onOpenDynaMix}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition-colors shrink-0 active:scale-95 shadow-sm"
+                title="Open DynaMix Audio Transition & Energy Analysis"
+              >
+                <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden md:inline">DYNAMIX</span>
+              </button>
+            )}
 
             {/* Load Track Button */}
             <button
@@ -292,6 +394,14 @@ export const Deck: React.FC<DeckProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Real-Time Beat FX & 3-Slot Fader FX Suite */}
+        <DeckTopFxBar
+          deckId={state.id}
+          effectiveBpm={state.effectiveBpm}
+          accentColor={accentColor}
+          onOpenFaderFx={onOpenFaderFx}
+        />
 
         {/* Waveform Scrubber Timeline */}
         <WaveformScrubber

@@ -546,6 +546,267 @@ class AudioFxEngine {
     osc.start(now);
     osc.stop(now + 0.04);
   }
+
+  // --- Ean Golden Fader FX & Pioneer SoundColorFX Synthesis Engine ---
+
+  public triggerFaderFx(chainId: string, superKnob: number = 0.7) {
+    if (this.isMuted) return;
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
+    const beatSec = (60 / this.fxBpm);
+    const amount = Math.max(0.1, Math.min(1.0, superKnob));
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(this.volume * amount * 0.85, now);
+    masterGain.connect(ctx.destination);
+
+    switch (chainId) {
+      case 'detox': {
+        // Slot 1: BeatMasher stutter
+        // Slot 2: BitCrush Lo-Fi
+        // Slot 3: Peak Filter
+        const stutters = 6;
+        for (let i = 0; i < stutters; i++) {
+          const t = now + (i * beatSec * 0.5) / stutters;
+          const osc = ctx.createOscillator();
+          osc.type = 'sawtooth';
+          osc.frequency.value = 160 + i * 25;
+
+          const shaper = ctx.createWaveShaper();
+          (shaper as any).curve = crushCurve(Math.max(2, Math.floor(16 * (1 - amount * 0.7))));
+
+          const peak = ctx.createBiquadFilter();
+          peak.type = 'peaking';
+          peak.frequency.value = 800 + amount * 2400;
+          peak.Q.value = 6;
+          peak.gain.value = 12 * amount;
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.4, t);
+          g.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+          osc.connect(shaper);
+          shaper.connect(peak);
+          peak.connect(g);
+          g.connect(masterGain);
+
+          osc.start(t);
+          osc.stop(t + 0.05);
+        }
+        break;
+      }
+
+      case 'build': {
+        // Slot 1: Gater
+        // Slot 2: BeatMasher
+        // Slot 3: Rising Peak Filter
+        const pulses = 8;
+        for (let i = 0; i < pulses; i++) {
+          const t = now + (i * beatSec * 0.5) / pulses;
+          const osc = ctx.createOscillator();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(220 * Math.pow(1.08, i), t);
+
+          const hp = ctx.createBiquadFilter();
+          hp.type = 'highpass';
+          hp.frequency.setValueAtTime(300 + (i / pulses) * 2200, t);
+          hp.Q.value = 5;
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.35, t);
+          g.gain.exponentialRampToValueAtTime(0.01, t + (beatSec * 0.4) / pulses);
+
+          osc.connect(hp);
+          hp.connect(g);
+          g.connect(masterGain);
+
+          osc.start(t);
+          osc.stop(t + (beatSec * 0.4) / pulses);
+        }
+        break;
+      }
+
+      case 'swirl': {
+        // Slot 1: Flanger
+        // Slot 2: Ladder Filter LFO
+        // Slot 3: Concert Reverb
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(660, now + beatSec * 2);
+
+        const flangerDelay = ctx.createDelay(0.05);
+        flangerDelay.delayTime.setValueAtTime(0.002, now);
+        flangerDelay.delayTime.linearRampToValueAtTime(0.015, now + beatSec * 2);
+
+        const conv = ctx.createConvolver();
+        conv.buffer = makeImpulse(ctx, 3.0, 1.8);
+
+        osc.connect(flangerDelay);
+        flangerDelay.connect(conv);
+        conv.connect(masterGain);
+
+        osc.start(now);
+        osc.stop(now + beatSec * 2);
+        break;
+      }
+
+      case 'wormhole': {
+        // Heavy Filter + Jet Flanger + High-Feedback Delay
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + beatSec * 1.5);
+
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.setValueAtTime(2500, now);
+        bp.frequency.exponentialRampToValueAtTime(350, now + beatSec * 1.5);
+        bp.Q.value = 7.0;
+
+        const delay = ctx.createDelay(2);
+        delay.delayTime.value = beatSec * 0.75;
+        const fb = ctx.createGain();
+        fb.gain.value = 0.65;
+
+        delay.connect(fb);
+        fb.connect(delay);
+
+        osc.connect(bp);
+        bp.connect(delay);
+        delay.connect(masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.3);
+        break;
+      }
+
+      case 'polarwind': {
+        // Heavy Flanger + Light Filter + Shimmer Iceverb
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.linearRampToValueAtTime(1040, now + beatSec * 2);
+
+        const conv = ctx.createConvolver();
+        conv.buffer = makeImpulse(ctx, 3.5, 1.2);
+
+        osc.connect(conv);
+        conv.connect(masterGain);
+
+        osc.start(now);
+        osc.stop(now + 0.2);
+        break;
+      }
+
+      case 'dubecho': {
+        // Pioneer Dub Echo: 3/4 beat delay with bandpass feedback
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(330, now);
+        osc.frequency.exponentialRampToValueAtTime(165, now + 0.12);
+
+        const delay = ctx.createDelay(3);
+        delay.delayTime.value = beatSec * 0.75;
+        const fb = ctx.createGain();
+        fb.gain.value = 0.75 * amount;
+
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 350;
+
+        delay.connect(hp);
+        hp.connect(fb);
+        fb.connect(delay);
+        delay.connect(masterGain);
+
+        osc.connect(delay);
+        osc.start(now);
+        osc.stop(now + 0.15);
+        break;
+      }
+
+      case 'noisesweep': {
+        // Pioneer DJM White Noise + Sweep Filter
+        const bufferSize = ctx.sampleRate * 2.0;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.exponentialRampToValueAtTime(3800, now + beatSec * 2);
+        filter.Q.value = 5;
+
+        noise.connect(filter);
+        filter.connect(masterGain);
+        noise.start(now);
+        noise.stop(now + beatSec * 2);
+        break;
+      }
+
+      case 'spiralup': {
+        // Pioneer RMX-1000 Spiral Up: ascending pitch repeats
+        const repeats = 6;
+        for (let i = 0; i < repeats; i++) {
+          const t = now + (i * beatSec * 0.35);
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(260 * Math.pow(1.15, i), t);
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.35, t);
+          g.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+
+          osc.connect(g);
+          g.connect(masterGain);
+          osc.start(t);
+          osc.stop(t + 0.12);
+        }
+        break;
+      }
+
+      default:
+        // Default trigger Beat FX burst
+        this.triggerBeatFx();
+        break;
+    }
+  }
+
+  public playShepardTone() {
+    if (this.isMuted) return;
+    const ctx = this.initContext();
+    const now = ctx.currentTime;
+    const dur = 2.5;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(this.volume * 0.6, now);
+    masterGain.connect(ctx.destination);
+
+    // 4 octave-spaced oscillators ascending simultaneously
+    const baseFreqs = [55, 110, 220, 440];
+    baseFreqs.forEach((base) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(base, now);
+      osc.frequency.exponentialRampToValueAtTime(base * 2, now + dur);
+
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.2, now);
+      g.gain.exponentialRampToValueAtTime(0.01, now + dur);
+
+      osc.connect(g);
+      g.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + dur);
+    });
+  }
 }
 
 export const audioFx = new AudioFxEngine();
